@@ -16,8 +16,18 @@ ENV PATH="/opt/venv/bin:$PATH"
 # SOLUCIÓN: Actualización explícita del motor de empaquetado previo a la descarga pesada
 RUN pip install --upgrade pip setuptools wheel
 
-# Instalación de dependencias de ML con versiones ancladas para garantizar inmutabilidad
-RUN pip install --no-cache-dir ultralytics openvino==2023.3.0 openvino-dev==2023.3.0 opencv-python
+# Copiar el fichero de dependencias y construir un wheel cache.
+# Esto permite que Docker reutilice la capa si `requirements.txt` no cambia,
+# evitando volver a descargar paquetes ya wheelizados en cada build.
+COPY ws_py/requirements.txt /tmp/requirements.txt
+
+# Construir ruedas en /wheels (caché por capa). Si cambias versiones en
+# `requirements.txt` sólo se reconstruirán las ruedas nuevas.
+RUN python3 -m pip wheel --wheel-dir=/wheels -r /tmp/requirements.txt
+
+# Instalar desde las ruedas locales para evitar descargas innecesarias.
+RUN python3 -m pip install --no-index --find-links=/wheels -r /tmp/requirements.txt
+
 WORKDIR /workspace/ws_py
 
 

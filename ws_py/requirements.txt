@@ -1,0 +1,5 @@
+ultralytics
+openvino==2023.3.0
+openvino-dev==2023.3.0
+opencv-python
+
