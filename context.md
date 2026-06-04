@@ -70,6 +70,8 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * Antes de editar, leer este `context.md`, `Dockerfile`, `docker-compose.yaml`, `ws_py/requirements.txt` y el árbol de `ws_cpp/` para confirmar si hubo cambios nuevos.
 * Preferir cambios pequeños y trazables: primero dependencias y build reproducible, luego skeletons de código C++, luego scripts Python, y al final ajuste de despliegue.
 * Validar siempre con un build focalizado: `podman build --target python_env ...` para la etapa Python y un build CMake aislado para C++ cuando existan fuentes reales.
+* Para probar funcionamiento de scripts Python dentro del contenedor de entrenamiento usar: `podman-compose run --rm cbn_train python3`.
+* Por ningún motivo crear entornos virtuales Python en el sistema local del host; toda ejecución de entrenamiento/exportación/pruebas debe correr dentro del contenedor `cbn_train`.
 * Mantener una sola fuente de verdad para dependencias Python en `ws_py/requirements.txt` y evitar duplicarlas dentro del `Dockerfile`.
 * No comitear datasets, resultados de `runs/` ni pesos `.pt`; sólo mantener `.gitkeep` en directorios que deban sobrevivir vacíos.
 

@@ -1,0 +1,9 @@
+path: dataset
+train: train/images
+val: val/images
+test: test/images
+
+names:
+	0: cap
+	1: empty_slot
+
