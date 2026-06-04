@@ -47,3 +47,28 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 2.  **Error 404 Hello World:** Resuelto aplicando sintaxis TOML V2 a los registros de ingesta OCI.
 3.  **Crash de Seguridad PyTorch 2.6:** Resuelto liberando el *version pinning* de `ultralytics` para que el sistema descargue **YOLO26**, el cual es compatible con la nueva API de deserialización segura de tensores.
 4.  **Paridad C++/Python:** OpenVINO mantenido rígidamente en 2023.3.0 en ambos ecosistemas para evitar un "IR Version Mismatch" fatal al momento de ejecutar la inferencia en el borde.
+
+## 6. Estado Actual del Repositorio y Modificaciones Recientes
+
+### 6.1 Cambios ya aplicados
+* `ws_py/requirements.txt` ahora concentra las dependencias Python que antes estaban embebidas en el `Dockerfile`.
+* `Dockerfile` de `python_env` fue actualizado para construir un wheelhouse en `/wheels` y reinstalar desde ruedas locales con `pip --no-index`, reduciendo descargas repetidas cuando cambian poco las dependencias.
+* `.gitignore` fue extendido para ignorar contenido generado por `ws_py/datasets/`, `ws_py/runs/` y todos los archivos `*.pt`.
+* Se agregaron placeholders `.gitkeep` en carpetas vacías que deben preservarse en Git: `ws_py/dataset/`, `ws_py/datasets/` y `ws_py/runs/`.
+
+### 6.2 Estado funcional detectado
+* `ws_cpp/CMakeLists.txt`, `ws_cpp/src/main.cpp`, `ws_cpp/src/cbn_detector.cpp` y `ws_cpp/include/cbn_detector.hpp` están vacíos; el binario `cbn_inference_node` no puede compilarse todavía.
+* `ws_py/train.py` y `ws_py/export_int8.py` están vacíos; el servicio `cbn_train` hoy no realiza entrenamiento ni exportación real.
+* `ws_py/test/test_env.py` referencia `YOLO('yolo11n.pt')`, lo que debe verificarse porque puede no coincidir con el artefacto real esperado para esta línea de trabajo.
+* `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y `cbn_test_cpp` para compilación local; `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
+
+### 6.3 Flujo recomendado para agentes futuros
+* Antes de editar, leer este `context.md`, `Dockerfile`, `docker-compose.yaml`, `ws_py/requirements.txt` y el árbol de `ws_cpp/` para confirmar si hubo cambios nuevos.
+* Preferir cambios pequeños y trazables: primero dependencias y build reproducible, luego skeletons de código C++, luego scripts Python, y al final ajuste de despliegue.
+* Validar siempre con un build focalizado: `podman build --target python_env ...` para la etapa Python y un build CMake aislado para C++ cuando existan fuentes reales.
+* Mantener una sola fuente de verdad para dependencias Python en `ws_py/requirements.txt` y evitar duplicarlas dentro del `Dockerfile`.
+* No comitear datasets, resultados de `runs/` ni pesos `.pt`; sólo mantener `.gitkeep` en directorios que deban sobrevivir vacíos.
+
+### 6.4 Observaciones operativas
+* El repo está en una fase intermedia: la infraestructura de contenedores ya fue racionalizada parcialmente, pero la capa de aplicación aún no está implementada en C++ ni en Python.
+* El trabajo futuro debe centrarse en completar el binario C++, definir el pipeline de entrenamiento/exportación y cerrar la paridad OpenVINO entre Python y C++.
