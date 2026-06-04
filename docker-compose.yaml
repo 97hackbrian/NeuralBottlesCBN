@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # [MÁQUINA DE DESARROLLO] - Entrenamiento YOLO26
+  cbn_train:
+    build:
+      context: .
+      target: python_env
+    volumes:
+      - ./ws_py:/workspace/ws_py
+    # Para usar GPU en Linux (NVIDIA), descomente las siguientes líneas:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    command: /bin/bash -c "python3 train.py && python3 export_int8.py"
+
+  # [MÁQUINA DE DESARROLLO] - Prueba de Inferencia C++ Local (Compilación Nativa)
+  cbn_test_cpp:
+    build:
+      context: .
+      target: cpp_base
+    devices:
+      - "/dev/video0:/dev/video0" # Ajuste según su cámara web
+    group_add:
+      - video
+    volumes:
+      - ./ws_cpp:/workspace/ws_cpp
+    command: /bin/bash -c "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja && ./cbn_inference_node"
+
+  # [MÁQUINA DE PRODUCCIÓN] - Inferencia Industrial
+  cbn_edge:
+    image: neuralbottles_edge:latest
+    devices:
+      - "/dev/video0:/dev/video0"
+    group_add:
+      - video
+    volumes:
+      - ./ws_cpp/models:/app/models:ro
+    restart: unless-stopped
