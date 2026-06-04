@@ -1,18 +1,26 @@
 # =========================================================================
 # ETAPA 1: ENTORNO DE ENTRENAMIENTO (Python / YOLO26)
-# Objetivo: Entrenar el modelo y exportarlo a OpenVINO IR (.xml / .bin)
 # =========================================================================
-FROM debian:13-slim AS python_env
+# SOLUCIÓN: Uso de Debian 12 para forzar la inyección de Python 3.11 (Compatible con OpenVINO y Numpy precompilado)
+FROM debian:12-slim AS python_env
 ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv libgl1 libglib2.0-0 \
+    python3 python3-pip python3-venv python3-dev build-essential libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
-# Creación de entorno virtual para evitar conflictos PEP 668
+
+# Creación de entorno virtual
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-# Instalación de Ultralytics (Soporte nativo YOLO26) y herramientas de exportación
-RUN pip install --no-cache-dir ultralytics openvino openvino-dev opencv-python
+
+# SOLUCIÓN: Actualización explícita del motor de empaquetado previo a la descarga pesada
+RUN pip install --upgrade pip setuptools wheel
+
+# Instalación de dependencias de ML con versiones ancladas para garantizar inmutabilidad
+RUN pip install --no-cache-dir ultralytics openvino==2023.3.0 openvino-dev==2023.3.0 opencv-python
 WORKDIR /workspace/ws_py
+
+
 
 # =========================================================================
 # ETAPA 2: BASE C++ (Cadena de herramientas)
