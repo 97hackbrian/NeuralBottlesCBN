@@ -8,14 +8,14 @@ services:
       target: python_env
     volumes:
       - ./ws_py:/workspace/ws_py
-    # Para usar GPU en Linux (NVIDIA), descomente las siguientes líneas:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    # GPU: podman-compose no soporta sintaxis CDI en 'devices'.
+    # Para usar GPU NVIDIA, ejecutar manualmente:
+    #   podman run --rm -it --device nvidia.com/gpu=all -v ./ws_py:/workspace/ws_py localhost/neuralbottlescbn_cbn_train python3 test/test_env.py
+    # Requisitos previos:
+    #   1. sudo apt-get install -y nvidia-container-toolkit
+    #   2. sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+    group_add:
+      - video
     command: /bin/bash -c "python3 train.py && python3 export_int8.py"
 
   # [MÁQUINA DE DESARROLLO] - Prueba de Inferencia C++ Local (Compilación Nativa)
