@@ -57,13 +57,14 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * `.gitignore` fue extendido para ignorar contenido generado por `ws_py/datasets/`, `ws_py/runs/` y todos los archivos `*.pt`.
 * Se agregaron placeholders `.gitkeep` en carpetas vacías que deben preservarse en Git: `ws_py/dataset/`, `ws_py/datasets/` y `ws_py/runs/`.
 * `setup_podman.sh` actualizado: en Debian/Ubuntu instala `python3-pip` y ejecuta `pip3 install podman-compose` (con fallback `--break-system-packages` para PEP 668). Los registros OCI ahora usan formato TOML V2 (`unqualified-search-registries`).
-* `docker-compose.yaml`: la sección de GPU fue comentada con instrucciones para ejecución manual vía `podman run`.
+* `docker-compose.yaml`: la sección de GPU fue comentada con instrucciones para ejecución manual vía `podman run`. Además, se ajustó el comando del servicio para compilación C++ para compilar y ejecutar `cbn_camera_test`.
+* Se crearon las bases del entorno C++: `ws_cpp/CMakeLists.txt` ha sido inicializado para compilar un binario de prueba `cbn_camera_test` usando el nuevo código `ws_cpp/test/camera_test.cpp` que verifica el acceso y lectura de OpenCV.
 
 ### 6.2 Estado funcional detectado
-* `ws_cpp/CMakeLists.txt`, `ws_cpp/src/main.cpp`, `ws_cpp/src/cbn_detector.cpp` y `ws_cpp/include/cbn_detector.hpp` están vacíos; el binario `cbn_inference_node` no puede compilarse todavía.
+* Se ha avanzado en la etapa C++: `ws_cpp/CMakeLists.txt` ahora compila un ejecutable de validación de hardware (`cbn_camera_test` a partir de `ws_cpp/test/camera_test.cpp`). Sin embargo, el binario principal `cbn_inference_node` aún no puede compilarse ya que `ws_cpp/src/main.cpp`, `ws_cpp/src/cbn_detector.cpp` y `ws_cpp/include/cbn_detector.hpp` continúan vacíos o pendientes de desarrollo.
 * `ws_py/train.py` y `ws_py/export_int8.py` están vacíos; el servicio `cbn_train` hoy no realiza entrenamiento ni exportación real.
 * `ws_py/test/test_env.py` referencia `YOLO('yolo11n.pt')`, lo que debe verificarse porque puede no coincidir con el artefacto real esperado para esta línea de trabajo.
-* `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y `cbn_test_cpp` para compilación local; `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
+* `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y compilación local en C++ (ahora validando con `cbn_camera_test`); `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
 * **El entrenamiento YOLO26 funciona correctamente pero solo en CPU.** La GPU NVIDIA no es accesible desde dentro del contenedor Podman.
 
 ### 6.3 Flujo recomendado para agentes futuros

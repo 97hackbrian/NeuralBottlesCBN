@@ -31,9 +31,14 @@ services:
       - "/dev/video0:/dev/video0" # Ajuste según su cámara web
     group_add:
       - video
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    ipc: host
     volumes:
       - ./ws_cpp:/workspace/ws_cpp
-    command: /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja && ./cbn_inference_node"
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    command: /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja && ./cbn_camera_test"
 
   # [MÁQUINA DE PRODUCCIÓN] - Inferencia Industrial
   cbn_edge:
@@ -43,6 +48,11 @@ services:
     group_add:
       - video
     working_dir: /app
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    ipc: host
     volumes:
       - ./ws_cpp/models:/app/models:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
     restart: unless-stopped
