@@ -63,7 +63,11 @@ if [ "$IS_PRODUCTION" = true ]; then
     PACKAGES="$PACKAGES v4l-utils"
 else
     echo "[INFO] Perfil: DESARROLLO. Añadiendo podman-compose."
-    PACKAGES="$PACKAGES podman-compose"
+    if [ "$PKG_MANAGER" == "apt" ]; then
+        PACKAGES="$PACKAGES python3-pip"
+    elif [ "$PKG_MANAGER" == "pacman" ]; then
+        PACKAGES="$PACKAGES podman-compose"
+    fi
 fi
 
 # --- 6. Ejecución del Gestor de Paquetes ---
@@ -71,6 +75,11 @@ if [ "$PKG_MANAGER" == "apt" ]; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -y
     apt-get install -y --no-install-recommends $PACKAGES
+    
+    if [ "$IS_PRODUCTION" = false ]; then
+        echo "[INFO] Instalando podman-compose vía pip3..."
+        pip3 install --break-system-packages podman-compose || pip3 install podman-compose
+    fi
 elif [ "$PKG_MANAGER" == "pacman" ]; then
     pacman -Syu --noconfirm $PACKAGES
 fi
@@ -81,8 +90,7 @@ REGISTRIES_CONF="$REGISTRIES_DIR/00-shortnames.conf"
 
 mkdir -p "$REGISTRIES_DIR"
 cat <<EOF > "$REGISTRIES_CONF"
-[registries.search]
-registries = ['docker.io', 'quay.io']
+unqualified-search-registries = ["docker.io", "quay.io"]
 EOF
 
 # --- 8. Mapeo de Identificadores (Rootless SubUID/SubGID) ---
