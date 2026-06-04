@@ -45,12 +45,12 @@ echo "[INFO] Sistema base detectado: $PRETTY_NAME"
 
 # --- 4. Resolución de Paquetes Base por Sistema Operativo ---
 if [[ "$OS" == "debian" || "$OS" == "ubuntu" || "$OS_LIKE" == *"debian"* || "$OS_LIKE" == *"ubuntu"* ]]; then
-    # Debian/Ubuntu requieren uidmap explícitamente
-    PACKAGES="podman uidmap slirp4netns"
+    # Debian/Ubuntu requieren uidmap explícitamente y `passt` para el backend rootless `pasta`
+    PACKAGES="podman uidmap slirp4netns passt"
     PKG_MANAGER="apt"
 elif [[ "$OS" == "manjaro" || "$OS" == "arch" || "$OS_LIKE" == *"arch"* ]]; then
-    # Arch/Manjaro incluyen uidmap en el paquete base 'shadow'
-    PACKAGES="podman slirp4netns"
+    # Arch/Manjaro incluyen uidmap en el paquete base 'shadow'; instalar `passt` para `pasta`
+    PACKAGES="podman slirp4netns passt"
     PKG_MANAGER="pacman"
 else
     echo "[ERROR] Entorno de distribución no soportado por esta rutina de automatización."
@@ -84,7 +84,18 @@ elif [ "$PKG_MANAGER" == "pacman" ]; then
     pacman -Syu --noconfirm $PACKAGES
 fi
 
-# --- 7. Configuración de Registros de Ingesta (OCI) ---
+# --- 7. Validación de binarios rootless necesarios para Podman ---
+if ! command -v pasta >/dev/null 2>&1; then
+    if command -v passt >/dev/null 2>&1; then
+        echo "[INFO] Detectado backend 'passt'; el binario 'pasta' será resuelto por ese paquete."
+    else
+        echo "[ERROR] No se encontró 'pasta' ni 'passt' después de la instalación."
+        echo "        Instale 'passt' manualmente y vuelva a ejecutar este script."
+        exit 1
+    fi
+fi
+
+# --- 8. Configuración de Registros de Ingesta (OCI) ---
 REGISTRIES_DIR="/etc/containers/registries.conf.d"
 REGISTRIES_CONF="$REGISTRIES_DIR/00-shortnames.conf"
 
@@ -93,7 +104,7 @@ cat <<EOF > "$REGISTRIES_CONF"
 unqualified-search-registries = ["docker.io", "quay.io"]
 EOF
 
-# --- 8. Mapeo de Identificadores (Rootless SubUID/SubGID) ---
+# --- 9. Mapeo de Identificadores (Rootless SubUID/SubGID) ---
 if [ -n "$SUDO_USER" ]; then
     if ! grep -q "^$SUDO_USER:" /etc/subuid; then
         usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$SUDO_USER"

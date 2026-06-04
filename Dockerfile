@@ -34,16 +34,13 @@ WORKDIR /workspace/ws_py
 
 # =========================================================================
 # ETAPA 2: BASE C++ (Cadena de herramientas)
-# Objetivo: Entorno con compiladores y librerías de Intel
+# Objetivo: Entorno con compiladores y librerías OpenVINO oficiales
 # =========================================================================
-FROM debian:13-slim AS cpp_base
+FROM openvino/ubuntu22_dev:2023.3.0 AS cpp_base
 ENV DEBIAN_FRONTEND=noninteractive
+USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build pkg-config libopencv-dev wget gnupg2 ca-certificates \
-    && wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-    && apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-    && echo "deb https://apt.repos.intel.com/openvino/2023 debian main" > /etc/apt/sources.list.d/intel-openvino.list \
-    && apt-get update && apt-get install -y --no-install-recommends openvino-2023.3.0 \
+    build-essential cmake ninja-build pkg-config libopencv-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace/ws_cpp
 
@@ -62,15 +59,11 @@ RUN mkdir build && cd build && \
 # ETAPA 4: EDGE RUNTIME (Micro-imagen para la computadora industrial)
 # Objetivo: Despliegue daemonless en 4GB RAM sin compiladores
 # =========================================================================
-FROM debian:13-slim AS edge_runtime
+FROM openvino/ubuntu22_runtime:2023.3.0 AS edge_runtime
 ENV DEBIAN_FRONTEND=noninteractive
+USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopencv-core4.6 libopencv-videoio4.6 libopencv-imgproc4.6 \
-    wget gnupg2 ca-certificates \
-    && wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-    && apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-    && echo "deb https://apt.repos.intel.com/openvino/2023 debian main" > /etc/apt/sources.list.d/intel-openvino.list \
-    && apt-get update && apt-get install -y --no-install-recommends openvino-2023.3.0 \
+    libopencv-core4.5 libopencv-videoio4.5 libopencv-imgproc4.5 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -s /bin/bash cbn_user && usermod -aG video cbn_user
 WORKDIR /app

@@ -3,9 +3,11 @@ version: '3.8'
 services:
   # [MÁQUINA DE DESARROLLO] - Entrenamiento YOLO26
   cbn_train:
+    image: localhost/neuralbottlescbn_cbn_train:latest
     build:
       context: .
       target: python_env
+    working_dir: /workspace/ws_py
     volumes:
       - ./ws_py:/workspace/ws_py
     # GPU: podman-compose no soporta sintaxis CDI en 'devices'.
@@ -20,24 +22,27 @@ services:
 
   # [MÁQUINA DE DESARROLLO] - Prueba de Inferencia C++ Local (Compilación Nativa)
   cbn_test_cpp:
+    image: localhost/neuralbottlescbn_cbn_test_cpp:latest
     build:
       context: .
       target: cpp_base
+    working_dir: /workspace/ws_cpp
     devices:
       - "/dev/video0:/dev/video0" # Ajuste según su cámara web
     group_add:
       - video
     volumes:
       - ./ws_cpp:/workspace/ws_cpp
-    command: /bin/bash -c "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja && ./cbn_inference_node"
+    command: /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja && ./cbn_inference_node"
 
   # [MÁQUINA DE PRODUCCIÓN] - Inferencia Industrial
   cbn_edge:
-    image: neuralbottles_edge:latest
+    image: localhost/neuralbottles_edge:latest
     devices:
       - "/dev/video0:/dev/video0"
     group_add:
       - video
+    working_dir: /app
     volumes:
       - ./ws_cpp/models:/app/models:ro
     restart: unless-stopped
