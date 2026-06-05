@@ -29,9 +29,39 @@ NeuralBottlesCBN/
 │   ├── train.py         # Script de entrenamiento de arquitectura YOLO
 │   └── export_int8.py   # Congelación de grafo y conversión a OpenVINO IR (.xml / .bin)
 ├── ws_cpp/              # Entorno de Inferencia y Despliegue (C++)
-│   ├── CMakeLists.txt   # Manifiesto de compilación (Dependencias: OpenCV, OpenVINO)
-│   ├── src/             # Implementación de decodificación de tensores y NMS
-│   ├── include/         # Cabeceras y estructuras de datos abstractas
-│   ├── scripts/         # Automatización de compilación Ninja
+│   ├── CMakeLists.txt   # Manifiesto de compilación (OpenCV, OpenVINO, ImGui, GLFW)
+│   ├── config/          # Configuraciones YAML y layouts de ImGui (imgui.ini)
+│   ├── src/             # Fuentes C++ (laboratorio_cbn.cpp, pipeline.cpp)
+│   ├── include/         # Cabeceras C++ (pipeline.h)
+│   ├── test/            # Scripts de validación de hardware
 │   └── models/          # Directorio receptor para la Representación Intermedia INT8
-└── Dockerfile           # Receta de empaquetado multi-etapa para aislamiento de despliegue# NeuralBottlesCBN
+├── docker-compose.yaml  # Orquestador local para compilación y desarrollo
+└── Dockerfile           # Receta multi-etapa para compilación C++ y despliegue
+```
+
+## Ejecución del Laboratorio C++ (Desarrollo)
+
+El entorno C++ local (`cbn_test_cpp`) integra una interfaz gráfica basada en **Dear ImGui** para configurar parámetros, inspeccionar visualmente los casilleros de botellas y operar las cámaras en tiempo real.
+
+Debido a que el contenedor debe comunicarse con la pantalla principal, es **obligatorio** habilitar el acceso al servidor gráfico X11 antes de arrancarlo.
+
+### Pasos:
+
+1. **Permitir la conexión de la interfaz gráfica local:**
+   ```bash
+   xhost +local:
+   ```
+2. **Construir la imagen de contenedor C++:**
+   ```bash
+   podman-compose build cbn_test_cpp
+   ```
+3. **Lanzar la interfaz visual (Laboratorio CBN):**
+   ```bash
+   podman-compose run --rm cbn_test_cpp
+   ```
+
+> **Nota:** En caso de fallos de descarga al compilar (DNS en Podman), el contenedor usa por defecto `network_mode: host` para resolver conexiones.
+
+---
+
+Para consultar detalles a fondo sobre resolución de problemas (Gaps resueltos) y decisiones arquitectónicas, revisa el archivo [`context.md`](context.md).
