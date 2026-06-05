@@ -74,3 +74,4 @@ ws_py/datasets/*
 ws_py/runs/*
 !ws_py/runs/.gitkeep
 *.pt
+*.bin

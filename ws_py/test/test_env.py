@@ -18,8 +18,7 @@ def auditar_entorno():
     try:
         print("\n[Fase 1] Instanciando topología YOLO y ejecutando propagación hacia adelante/atrás (1 epoch)...")
         # Descarga automática del modelo más ligero para prueba
-        # Cambie 'yolov8n.pt' por la arquitectura moderna
-        model = YOLO('yolo26s.pt')
+        model = YOLO('yolo26n.pt')
         
         # Entrenamiento simulado para compilar el grafo de autograd
         dispositivo = '0' if cuda_disponible else 'cpu'
