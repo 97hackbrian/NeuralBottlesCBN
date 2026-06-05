@@ -60,6 +60,7 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * `docker-compose.yaml`: Se añadió `network_mode: host` en `cbn_test_cpp` para solucionar fallos de resolución DNS (aardvark-dns) con Podman. El comando de compilación se actualizó para compilar y ejecutar `laboratorio_cbn`.
 * **Fusión de Entorno C++**: Se migró el código C++ del antiguo workspace (`laboratorio_cbn.cpp`, `pipeline.cpp`, `pipeline.h`) a `ws_cpp/src/` y `ws_cpp/include/`. Se estructuraron las configuraciones en `ws_cpp/config/` (migrando `config*.yaml` e `imgui.ini`).
 * `Dockerfile` y `CMakeLists.txt` actualizados: Se agregaron las dependencias gráficas (`libglfw3-dev`, `libgl1-mesa-dev`) en una nueva capa de caché y se configuró `FetchContent` en CMake para descargar e integrar `Dear ImGui`.
+* **Rutas Dinámicas (C++)**: Se implementó un esquema de rutas robusto mediante `getWorkspacePath()` (vía `/proc/self/exe`), integrando el guardado de capturas (Burst) y el procesamiento de lotes directamente en `ws_py/dataset/` (`Captures/`, `raw/`, `processed/`), con creación automática de carpetas faltantes para garantizar que funcione al primer intento ("plug and play") en cualquier entorno.
 
 ### 6.2 Estado funcional detectado
 * La etapa C++ es funcional: `ws_cpp/CMakeLists.txt` compila exitosamente el binario principal `laboratorio_cbn` (con interfaz gráfica ImGui, OpenCV y OpenGL) y el ejecutable de validación `cbn_camera_test`. La interfaz de laboratorio se ejecuta correctamente dentro del contenedor desplegando la ventana en el host.
