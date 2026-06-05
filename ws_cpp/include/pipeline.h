@@ -42,6 +42,11 @@ void guardarPresets(const std::string& filename);
 bool cargarPresets(const std::string& filename);
 
 // ============================================================================
+// Path Resolution
+// ============================================================================
+std::string getWorkspacePath(const std::string& relative_to_build);
+
+// ============================================================================
 // Core Vision Pipeline
 // ============================================================================
 cv::Mat processImage(const cv::Mat& input, const AppSettings& config, cv::Rect& applied_roi);

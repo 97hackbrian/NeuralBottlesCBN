@@ -2,6 +2,19 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <unistd.h>
+#include <limits.h>
+
+std::string getWorkspacePath(const std::string& relative_to_build) {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    if (count != -1) {
+        std::filesystem::path exe_path(std::string(result, (count > 0) ? count : 0));
+        std::filesystem::path target = exe_path.parent_path() / relative_to_build;
+        return target.lexically_normal().string();
+    }
+    return relative_to_build;
+}
 
 // Definitions
 AppSettings g_settings;
@@ -173,8 +186,8 @@ cv::Mat processImage(const cv::Mat& input, const AppSettings& config, cv::Rect& 
 }
 
 void processDataset(const AppSettings& config, int camera_id) {
-    std::string input_dir = "../data/raw/cam" + std::to_string(camera_id) + "/";
-    std::string output_dir = "../data/processed/cam" + std::to_string(camera_id) + "/";
+    std::string input_dir = getWorkspacePath("../data/raw/cam" + std::to_string(camera_id) + "/");
+    std::string output_dir = getWorkspacePath("../data/processed/cam" + std::to_string(camera_id) + "/");
 
     if (!std::filesystem::exists(input_dir)) {
         std::cerr << "[ERROR] La carpeta de entrada no existe: " << input_dir << std::endl;

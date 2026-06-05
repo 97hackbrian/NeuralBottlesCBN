@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     int current_camera_idx = 0;
     int active_cam_id = available_cameras[current_camera_idx];
 
-    std::string current_yaml = "../config/config_cam" + std::to_string(active_cam_id) + ".yaml";
+    std::string current_yaml = getWorkspacePath("../config/config_cam" + std::to_string(active_cam_id) + ".yaml");
     cargarPresets(current_yaml);
 
     // 3. Setup GLFW window
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
                     if (ImGui::Selectable(cam_name.c_str(), is_selected)) {
                         if (current_camera_idx != n) {
                             // 1. Guardar config actual
-                            guardarPresets("../config/config_cam" + std::to_string(active_cam_id) + ".yaml");
+                            guardarPresets(getWorkspacePath("../config/config_cam" + std::to_string(active_cam_id) + ".yaml"));
                             
                             // 2. Cambiar variables
                             current_camera_idx = n;
@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
                             }
                             
                             // 4. Cargar config nueva
-                            cargarPresets("../config/config_cam" + std::to_string(active_cam_id) + ".yaml");
+                            cargarPresets(getWorkspacePath("../config/config_cam" + std::to_string(active_cam_id) + ".yaml"));
                         }
                     }
                     if (is_selected) ImGui::SetItemDefaultFocus();
@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
 
         if (ImGui::CollapsingHeader("Acciones", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Guardar Presets", ImVec2(ImGui::GetContentRegionAvail().x, 30))) {
-                guardarPresets("../config/config_cam" + std::to_string(active_cam_id) + ".yaml");
+                guardarPresets(getWorkspacePath("../config/config_cam" + std::to_string(active_cam_id) + ".yaml"));
             }
             ImGui::Spacing();
             if (b_burst) {
@@ -358,7 +358,7 @@ int main(int argc, char** argv) {
             auto current_time = std::chrono::steady_clock::now();
             if (std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_save).count() >= 200) {
                 last_save = current_time;
-                std::string output_dir = "../data/captures/cam" + std::to_string(active_cam_id) + "/";
+                std::string output_dir = getWorkspacePath("../../ws_py/dataset/Captures/cam" + std::to_string(active_cam_id) + "/");
                 std::filesystem::create_directories(output_dir);
                 char time_buf[64];
                 std::time_t t = std::time(nullptr);
