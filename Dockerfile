@@ -72,7 +72,7 @@ WORKDIR /workspace/ws_cpp
 FROM cpp_base AS cpp_builder_edge
 COPY ws_cpp /workspace/ws_cpp
 # Compilación forzada para arquitectura Silvermont (Celeron J1900)
-RUN mkdir build && cd build && \
+RUN rm -rf build && mkdir build && cd build && \
     cmake .. -G Ninja -DCMAKE_CXX_FLAGS="-msse4.2 -march=silvermont -O3" && \
     ninja
 
@@ -84,13 +84,16 @@ FROM openvino/ubuntu22_runtime:2023.3.0 AS edge_runtime
 ENV DEBIAN_FRONTEND=noninteractive
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libopencv-core4.5 libopencv-videoio4.5 libopencv-imgproc4.5 ca-certificates \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -s /bin/bash cbn_user && usermod -aG video cbn_user
 WORKDIR /app
+
+# Copiar las librerías de OpenCV (v4.8) empaquetadas con OpenVINO dev
+COPY --from=cpp_builder_edge /opt/intel/openvino_2023.3.0.13775/extras/opencv/lib/ /usr/local/lib/
+RUN ldconfig
+
 # Extracción estrictamente del binario compilado en la Etapa 3
 COPY --from=cpp_builder_edge /workspace/ws_cpp/build/cbn_inference_node /app/
-# Asignación de propiedad
-RUN chown -R cbn_user:cbn_user /app
-USER cbn_user
+
 ENTRYPOINT ["./cbn_inference_node"]

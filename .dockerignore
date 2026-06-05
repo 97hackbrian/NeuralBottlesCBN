@@ -1,0 +1,10 @@
+.git
+.gitignore
+README.md
+context.md
+ws_cpp/build
+ws_py/runs
+ws_py/__pycache__
+**/__pycache__
+*.pt
+*.bin

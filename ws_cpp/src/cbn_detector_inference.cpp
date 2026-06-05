@@ -13,8 +13,9 @@ int main(int argc, char** argv) {
 
     // 1. Inicializar OpenVINO
     ov::Core core;
-    std::string model_path = "../models/cbn_model.xml";
-    std::string labels_path = "../config/labels.yaml";
+    // En producción (contenedor edge), el working_dir es /app
+    std::string model_path = "models/cbn_model.xml";
+    std::string labels_path = "config/labels.yaml";
     std::shared_ptr<ov::Model> model;
     
     try {
