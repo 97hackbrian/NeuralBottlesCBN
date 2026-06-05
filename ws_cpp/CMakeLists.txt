@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
+find_package(OpenVINO REQUIRED)
 
 # Find GLFW and OpenGL
 find_package(glfw3 REQUIRED)
@@ -34,9 +35,15 @@ set(IMGUI_SOURCES
 add_executable(cbn_camera_test
 	test/camera_test.cpp
 )
-
 target_link_libraries(cbn_camera_test PRIVATE ${OpenCV_LIBS})
 target_include_directories(cbn_camera_test PRIVATE ${OpenCV_INCLUDE_DIRS})
+
+# Test de Inferencia (OpenVINO + OpenCV)
+add_executable(cbn_test_inference
+    test/test_inference.cpp
+)
+target_include_directories(cbn_test_inference PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(cbn_test_inference PRIVATE ${OpenCV_LIBS} openvino::runtime)
 
 # Main executable (Inference Node / Laboratorio)
 add_executable(laboratorio_cbn 
@@ -54,6 +61,21 @@ target_include_directories(laboratorio_cbn PRIVATE
 
 target_link_libraries(laboratorio_cbn PRIVATE 
     ${OpenCV_LIBS}
+    openvino::runtime
     glfw
     OpenGL::GL
+)
+
+# Nodo de Producción (Headless / Edge)
+# Se usa para el despliegue en la máquina industrial Celeron
+add_executable(cbn_inference_node 
+    src/cbn_detector_inference.cpp
+)
+target_include_directories(cbn_inference_node PRIVATE 
+    include
+    ${OpenCV_INCLUDE_DIRS}
+)
+target_link_libraries(cbn_inference_node PRIVATE 
+    ${OpenCV_LIBS}
+    openvino::runtime
 )
