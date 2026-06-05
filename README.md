@@ -114,8 +114,49 @@ Debido a que el contenedor debe comunicarse con la pantalla principal, es **obli
    ```bash
    podman-compose run --rm cbn_test_cpp
    ```
+4. **Probar el nodo de inferencia puro en desarrollo:**
+   ```bash
+   podman-compose run --rm cbn_test_cpp /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja && ninja cbn_inference_node && cd .. && ./build/cbn_inference_node"
+   ```
 
 > **Nota:** En caso de fallos de descarga al compilar (DNS en Podman), el contenedor usa por defecto `network_mode: host` para resolver conexiones.
+
+---
+
+## Fase de Inferencia en Producción (Edge Deployment)
+
+El entorno final se compila utilizando un método de *cross-compiling* optimizado para el procesador Celeron J1900. No se necesitan compiladores en la máquina destino.
+
+### 1. Generar la imagen para producción (En la máquina de desarrollo)
+
+Este comando compila el binario con soporte SSE4.2 y lo aísla en una micro-imagen limpia:
+```bash
+podman build --target edge_runtime -t localhost/neuralbottles_edge:latest .
+```
+
+Luego, empaqueta la imagen para transferirla a un USB/red:
+```bash
+podman save -o neuralbottles_edge.tar localhost/neuralbottles_edge:latest
+```
+
+### 2. Despliegue en la máquina industrial (Celeron J1900)
+
+Transfiere el `.tar`, la carpeta `ws_cpp/models` y `ws_cpp/config` al equipo final, y carga la imagen:
+```bash
+podman load -i neuralbottles_edge.tar
+```
+
+Finalmente, levanta el contenedor mapeando la cámara industrial y los modelos. Podman debe correr como tu usuario normal, pero se elimina el cambio de usuario interno para no perder el mapeo de permisos de `/dev/video0`:
+```bash
+podman run -d \
+  --name neuralbottles_inference \
+  --device /dev/video0:/dev/video0 \
+  --group-add video \
+  -v ./ws_cpp/models:/app/models:ro \
+  -v ./ws_cpp/config:/app/config:ro \
+  --restart unless-stopped \
+  localhost/neuralbottles_edge:latest
+```
 
 ---
 

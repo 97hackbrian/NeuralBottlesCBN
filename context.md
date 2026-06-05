@@ -58,12 +58,14 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * Se agregaron placeholders `.gitkeep` en carpetas vacías que deben preservarse en Git: `ws_py/dataset/`, `ws_py/datasets/` y `ws_py/runs/`.
 * `setup_podman.sh` actualizado: en Debian/Ubuntu instala `python3-pip` y ejecuta `pip3 install podman-compose` (con fallback `--break-system-packages` para PEP 668). Los registros OCI ahora usan formato TOML V2 (`unqualified-search-registries`).
 * `docker-compose.yaml`: Se añadió `network_mode: host` en `cbn_test_cpp` para solucionar fallos de resolución DNS (aardvark-dns) con Podman. El comando de compilación se actualizó para compilar y ejecutar `laboratorio_cbn`.
-* **Fusión de Entorno C++**: Se migró el código C++ del antiguo workspace (`laboratorio_cbn.cpp`, `pipeline.cpp`, `pipeline.h`) a `ws_cpp/src/` y `ws_cpp/include/`. Se estructuraron las configuraciones en `ws_cpp/config/` (migrando `config*.yaml` e `imgui.ini`).
-* `Dockerfile` y `CMakeLists.txt` actualizados: Se agregaron las dependencias gráficas (`libglfw3-dev`, `libgl1-mesa-dev`) en una nueva capa de caché y se configuró `FetchContent` en CMake para descargar e integrar `Dear ImGui`.
+* **Fusión de Entorno C++**: Se migró el código C++ del antiguo workspace (`laboratorio_cbn.cpp`, `pipeline.cpp`, `pipeline.h`) a `ws_cpp/src/` y `ws_cpp/include/`. Se estructuraron las configuraciones en `ws_cpp/config/` (migrando `config*.yaml` e `imgui.ini` y consolidando `labels.yaml` dinámico).
+* `Dockerfile` y `CMakeLists.txt` actualizados: Se agregaron las dependencias gráficas (`libglfw3-dev`, `libgl1-mesa-dev`) en una nueva capa de caché y se configuró `FetchContent` en CMake para descargar e integrar `Dear ImGui`. Se activó la compilación cruzada hacia Celeron J1900 inyectando banderas SSE4.2 y extrayendo dinámicamente las librerías precompiladas de OpenCV de Intel OpenVINO.
+* **Inferencia Nativa C++ (Completada):** Se desarrollaron y probaron dos ejecutables base utilizando el API `ov::Core`: `cbn_test_inference` (con GUI y dibujo de cajas delimitadoras corregidas de `[xmin, ymin, xmax, ymax]`) y `cbn_inference_node` (nodo headless de producción, operando a alta velocidad en CPU). Ambos cargan las etiquetas de `ws_cpp/config/labels.yaml` vía OpenCV `FileStorage`.
 * **Rutas Dinámicas (C++)**: Se implementó un esquema de rutas robusto mediante `getWorkspacePath()` (vía `/proc/self/exe`), integrando el guardado de capturas (Burst) y el procesamiento de lotes directamente en `ws_py/dataset/` (`Captures/`, `raw/`, `processed/`), con creación automática de carpetas faltantes para garantizar que funcione al primer intento ("plug and play") en cualquier entorno.
+* **Mapeo de Dispositivos (Podman Rootless):** Se removió el usuario sin privilegios `cbn_user` del contenedor Edge para evitar errores de permisos V4L2 (`Camera index out of range`) sobre `/dev/video0` mapeado desde el host.
 
 ### 6.2 Estado funcional detectado
-* La etapa C++ es funcional: `ws_cpp/CMakeLists.txt` compila exitosamente el binario principal `laboratorio_cbn` (con interfaz gráfica ImGui, OpenCV y OpenGL) y el ejecutable de validación `cbn_camera_test`. La interfaz de laboratorio se ejecuta correctamente dentro del contenedor desplegando la ventana en el host.
+* La etapa C++ es funcional: `ws_cpp/CMakeLists.txt` compila exitosamente el binario principal `laboratorio_cbn`, los ejecutables de validación, y los nodos de inferencia OpenVINO. Se validó que el modelo YOLO26 exportado es consumido correctamente logrando hasta ~60 FPS (16-24ms) en inferencia nativa por CPU.
 * **Pipeline MLOps Operativo:** La cadena completa en Python (Preparación, Entrenamiento y Exportación) está implementada y auditada sin bugs:
   - `prepare_dataset.py` maneja divisiones train/val y data augmentation (Albumentations) soportando imágenes de fondo sin etiquetas.
   - `train.py` entrena el modelo usando `argparse` para consumir el yaml generado dinámicamente.
@@ -84,7 +86,7 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 ### 6.4 Observaciones operativas
 * El repo se encuentra en un estado funcional avanzado tanto para la experimentación C++ (interfaz de laboratorio integrada con Dear ImGui) como para el entrenamiento del modelo.
 * **El pipeline completo de Python (`prepare`, `train`, `export`) está finalizado y libre de bugs.**
-* El trabajo futuro debe centrarse exclusivamente en conectar los modelos YOLO exportados (`cbn_model.xml`/`.bin`) con el pipeline de inferencia nativa en C++, escribiendo la lógica de ejecución OpenVINO para la máquina industrial.
+* **El puente a C++ (OpenVINO) también está finalizado**. El modelo `.xml`/`.bin` es procesado a alta velocidad por la lógica de ejecución en `ws_cpp/src/cbn_detector_inference.cpp` lista para desplegarse en la máquina industrial. El trabajo futuro deberá concentrarse en integraciones GPIO, PLCs o lógicas de negocio según lo demande la fábrica.
 
 ### 6.5 Problemas conocidos pendientes
 * **GPU AMD RX 580 (gfx803) — hardware legacy:** La RX 580 fue eliminada del soporte oficial de ROCm a partir de la versión 6.0. Se fuerza compatibilidad con `HSA_OVERRIDE_GFX_VERSION=8.0.3`. Puede haber inestabilidad en operaciones avanzadas. Para GPUs Vega/RDNA/RDNA2+ no se necesita este workaround.
