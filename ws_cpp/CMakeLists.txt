@@ -8,6 +8,29 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
 
+# Find GLFW and OpenGL
+find_package(glfw3 REQUIRED)
+find_package(OpenGL REQUIRED)
+
+# Fetch Dear ImGui
+include(FetchContent)
+FetchContent_Declare(
+    imgui
+    URL https://github.com/ocornut/imgui/archive/refs/tags/v1.90.4.tar.gz
+)
+FetchContent_MakeAvailable(imgui)
+
+# Gather ImGui source files
+set(IMGUI_SOURCES
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
 add_executable(cbn_camera_test
 	test/camera_test.cpp
 )
@@ -15,3 +38,22 @@ add_executable(cbn_camera_test
 target_link_libraries(cbn_camera_test PRIVATE ${OpenCV_LIBS})
 target_include_directories(cbn_camera_test PRIVATE ${OpenCV_INCLUDE_DIRS})
 
+# Main executable (Inference Node / Laboratorio)
+add_executable(laboratorio_cbn 
+    src/laboratorio_cbn.cpp
+    src/pipeline.cpp
+    ${IMGUI_SOURCES}
+)
+
+target_include_directories(laboratorio_cbn PRIVATE 
+    include
+    ${OpenCV_INCLUDE_DIRS}
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
+target_link_libraries(laboratorio_cbn PRIVATE 
+    ${OpenCV_LIBS}
+    glfw
+    OpenGL::GL
+)

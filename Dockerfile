@@ -42,6 +42,10 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build pkg-config libopencv-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglfw3-dev libgl1-mesa-dev \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace/ws_cpp
 
 # =========================================================================
