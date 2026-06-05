@@ -76,3 +76,4 @@ ws_py/runs/*
 !ws_py/runs/.gitkeep
 *.pt
 *.bin
+ws_cpp/models/*.xml

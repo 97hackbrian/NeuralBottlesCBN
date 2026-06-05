@@ -12,6 +12,7 @@ services:
     working_dir: /workspace/ws_py
     volumes:
       - ./ws_py:/workspace/ws_py
+      - ./ws_cpp/models:/workspace/ws_cpp/models
     # --- GPU NVIDIA ---
     devices:
       - nvidia.com/gpu=all
