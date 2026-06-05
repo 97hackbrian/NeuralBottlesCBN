@@ -19,7 +19,7 @@ IMGSZ = 640
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Exportar modelo YOLO a OpenVINO INT8")
-    parser.add_argument("--weights", type=str, default="runs/detect/cbn_train/weights/best.pt", help="Ruta a los pesos entrenados")
+    parser.add_argument("--weights", type=str, default="runs/detect/runs/detect/cbn_train/weights/best.pt", help="Ruta a los pesos entrenados")
     parser.add_argument("--data", type=str, required=True, help="Ruta al cbn_dataset.yaml usado en el entrenamiento (necesario para calibración INT8)")
     parser.add_argument("--no-int8", action="store_true", help="Desactiva la cuantización INT8 (exporta en FP16/FP32)")
     return parser.parse_args()

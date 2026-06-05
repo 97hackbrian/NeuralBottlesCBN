@@ -2,3 +2,4 @@
 # Agregar aquí nuevos módulos sin miedo a invalidar la caché pesada.
 albumentations==2.0.8
 scikit-learn==1.9.0
+nncf==2.8.1
