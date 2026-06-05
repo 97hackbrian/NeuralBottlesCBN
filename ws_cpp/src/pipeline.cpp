@@ -186,12 +186,13 @@ cv::Mat processImage(const cv::Mat& input, const AppSettings& config, cv::Rect& 
 }
 
 void processDataset(const AppSettings& config, int camera_id) {
-    std::string input_dir = getWorkspacePath("../data/raw/cam" + std::to_string(camera_id) + "/");
-    std::string output_dir = getWorkspacePath("../data/processed/cam" + std::to_string(camera_id) + "/");
+    std::string input_dir = getWorkspacePath("../../ws_py/dataset/raw/cam" + std::to_string(camera_id) + "/");
+    std::string output_dir = getWorkspacePath("../../ws_py/dataset/processed/cam" + std::to_string(camera_id) + "/");
 
     if (!std::filesystem::exists(input_dir)) {
-        std::cerr << "[ERROR] La carpeta de entrada no existe: " << input_dir << std::endl;
-        std::cout << "[INFO] Por favor, crea la carpeta y coloca tus imagenes crudas en: " << input_dir << std::endl;
+        std::filesystem::create_directories(input_dir);
+        std::cout << "[INFO] Carpeta de origen creada automaticamente en: " << input_dir << std::endl;
+        std::cout << "[INFO] Por favor, coloca tus imagenes crudas (.jpg/.png) en esa carpeta y vuelve a presionar 'Process Dataset'." << std::endl;
         return;
     }
     std::filesystem::create_directories(output_dir);
