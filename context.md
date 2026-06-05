@@ -2,7 +2,7 @@
 **Documento de Especificación Arquitectónica y Estado del Entorno**
 
 ## 1. Definición del Proyecto
-Sistema de visión artificial para inferencia en tiempo real (borde industrial). Desarrollado en una estación de trabajo de alto rendimiento (**Ubuntu 22.04 LTS** con GPU NVIDIA) y desplegado en hardware de producción restringido (Intel Celeron J1900, 4GB RAM, Debian 13). Utiliza la arquitectura **YOLO26** (última generación de Ultralytics) cuantizada a enteros de 8 bits (INT8) mediante OpenVINO para ejecución máxima en CPU sin acelerador dedicado.
+Sistema de visión artificial para inferencia en tiempo real (borde industrial). La cámara inspecciona las botellas desde una vista superior (**topview**). Desarrollado en una estación de trabajo de alto rendimiento (**Ubuntu 22.04 LTS** con GPU NVIDIA) y desplegado en hardware de producción restringido (Intel Celeron J1900, 4GB RAM, Debian 13). Utiliza la arquitectura **YOLO26** (última generación de Ultralytics) cuantizada a enteros de 8 bits (INT8) mediante OpenVINO para ejecución máxima en CPU sin acelerador dedicado.
 
 ## 2. Topología de Infraestructura (OCI)
 El sistema opera bajo el motor de contenedores **Podman** (Rootless, Daemonless).
@@ -52,8 +52,8 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 ## 6. Estado Actual del Repositorio y Modificaciones Recientes
 
 ### 6.1 Cambios ya aplicados
-* `ws_py/requirements.txt` ahora concentra las dependencias Python que antes estaban embebidas en el `Dockerfile`.
-* `Dockerfile` de `python_env` fue actualizado para construir un wheelhouse en `/wheels` y reinstalar desde ruedas locales con `pip --no-index`, reduciendo descargas repetidas cuando cambian poco las dependencias.
+* **Optimización de Caché en Docker:** Se separaron las dependencias de Python en `ws_py/requirements_base.txt` (pesadas: ultralytics, openvino, opencv) y `ws_py/requirements.txt` (ligeras: albumentations, scikit-learn). El `Dockerfile` instala estas capas de forma secuencial, evitando volver a descargar librerías pesadas al agregar módulos de experimentación. (El mecanismo antiguo de `pip wheel` fue descartado).
+* **Preparación de Dataset:** Se implementó `ws_py/prepare_dataset.py` para organizar las imágenes crudas, realizar un split de 80/20 (train/val) usando `scikit-learn`, y aplicar Data Augmentation offline físico (opcional, vía Albumentations con transformaciones industriales como Motion Blur, Flips H/V y Gauss Noise) o dejarlo para aumento online por defecto.
 * `.gitignore` fue extendido para ignorar contenido generado por `ws_py/datasets/`, `ws_py/runs/` y todos los archivos `*.pt`.
 * Se agregaron placeholders `.gitkeep` en carpetas vacías que deben preservarse en Git: `ws_py/dataset/`, `ws_py/datasets/` y `ws_py/runs/`.
 * `setup_podman.sh` actualizado: en Debian/Ubuntu instala `python3-pip` y ejecuta `pip3 install podman-compose` (con fallback `--break-system-packages` para PEP 668). Los registros OCI ahora usan formato TOML V2 (`unqualified-search-registries`).
@@ -64,7 +64,7 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 
 ### 6.2 Estado funcional detectado
 * La etapa C++ es funcional: `ws_cpp/CMakeLists.txt` compila exitosamente el binario principal `laboratorio_cbn` (con interfaz gráfica ImGui, OpenCV y OpenGL) y el ejecutable de validación `cbn_camera_test`. La interfaz de laboratorio se ejecuta correctamente dentro del contenedor desplegando la ventana en el host.
-* `ws_py/train.py` y `ws_py/export_int8.py` están vacíos; el servicio `cbn_train` hoy no realiza entrenamiento ni exportación real.
+* **Entrenamiento Operativo:** `ws_py/train.py` fue implementado y ya contiene la lógica de entrenamiento para YOLO26. Recibe dinámicamente la ruta del dataset con el flag `--data`. `ws_py/export_int8.py` sigue pendiente de implementación.
 * `ws_py/test/test_env.py` referencia `YOLO('yolo11n.pt')`, lo que debe verificarse porque puede no coincidir con el artefacto real esperado para esta línea de trabajo.
 * `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y compilación local en C++ (ahora validando con `cbn_camera_test`); `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
 * **El entrenamiento YOLO26 funciona correctamente pero solo en CPU.** La GPU NVIDIA no es accesible desde dentro del contenedor Podman.
@@ -75,12 +75,12 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * Validar siempre con un build focalizado: `podman build --target python_env ...` para la etapa Python y un build CMake aislado para C++ cuando existan fuentes reales.
 * Para probar funcionamiento de scripts Python dentro del contenedor de entrenamiento usar: `podman-compose run --rm cbn_train python3`.
 * Por ningún motivo crear entornos virtuales Python en el sistema local del host; toda ejecución de entrenamiento/exportación/pruebas debe correr dentro del contenedor `cbn_train`.
-* Mantener una sola fuente de verdad para dependencias Python en `ws_py/requirements.txt` y evitar duplicarlas dentro del `Dockerfile`.
+* Mantener dos ficheros de dependencias Python: `ws_py/requirements_base.txt` (paquetes pesados que rara vez cambian: ultralytics, openvino, opencv) y `ws_py/requirements.txt` (paquetes ligeros/experimentales: albumentations, scikit-learn, etc.). El `Dockerfile` los instala en capas separadas para que agregar módulos ligeros no invalide la caché de los pesados.
 * No comitear datasets, resultados de `runs/` ni pesos `.pt`; sólo mantener `.gitkeep` en directorios que deban sobrevivir vacíos.
 
 ### 6.4 Observaciones operativas
-* El repo se encuentra en un estado funcional avanzado para la experimentación C++: la infraestructura de contenedores fue racionalizada y la capa de aplicación C++ (interfaz de laboratorio) está integrada y operativa con Dear ImGui.
-* El trabajo futuro debe centrarse en conectar los modelos YOLO26 entrenados en Python con el pipeline de inferencia en C++, y refinar la arquitectura del detector para producción.
+* El repo se encuentra en un estado funcional avanzado tanto para la experimentación C++ (interfaz de laboratorio integrada con Dear ImGui) como para el entrenamiento del modelo, contando con scripts de data augmentation y entrenamiento optimizados.
+* El trabajo futuro debe centrarse en implementar la exportación a INT8 en `ws_py/export_int8.py`, conectar los modelos YOLO26 exportados con el pipeline de inferencia en C++, y refinar la arquitectura del detector para producción.
 
 ### 6.5 Problemas conocidos pendientes
 * **GPU no disponible en contenedores:** Podman 3.x (default en Ubuntu 22.04) no soporta CDI (Container Device Interface). Se requiere Podman ≥4.1 o configurar OCI hooks manualmente con `nvidia-ctk runtime configure --runtime=podman`. Mientras tanto, el entrenamiento opera exclusivamente en CPU.

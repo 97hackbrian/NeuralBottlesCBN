@@ -1,0 +1,7 @@
+# Dependencias pesadas y estables del proyecto.
+# Separadas para optimizar la caché de capas del contenedor.
+# Solo modificar cuando cambien las versiones core del proyecto.
+ultralytics==8.4.60
+openvino==2023.3.0
+openvino-dev==2023.3.0
+opencv-python==4.13.0.92

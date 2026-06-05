@@ -16,17 +16,16 @@ ENV PATH="/opt/venv/bin:$PATH"
 # SOLUCIÓN: Actualización explícita del motor de empaquetado previo a la descarga pesada
 RUN pip install --upgrade pip setuptools wheel
 
-# Copiar el fichero de dependencias y construir un wheel cache.
-# Esto permite que Docker reutilice la capa si `requirements.txt` no cambia,
-# evitando volver a descargar paquetes ya wheelizados en cada build.
+# --- CAPA PESADA (ultralytics, openvino, opencv) ---
+# Esta capa solo se reconstruye si cambias requirements_base.txt.
+# Agregar módulos ligeros a requirements.txt NO invalida esta caché.
+COPY ws_py/requirements_base.txt /tmp/requirements_base.txt
+RUN pip install -r /tmp/requirements_base.txt
+
+# --- CAPA LIGERA (albumentations, scikit-learn, etc.) ---
+# Esta capa se reconstruye rápido (~50MB) cuando agregas nuevos módulos.
 COPY ws_py/requirements.txt /tmp/requirements.txt
-
-# Construir ruedas en /wheels (caché por capa). Si cambias versiones en
-# `requirements.txt` sólo se reconstruirán las ruedas nuevas.
-RUN python3 -m pip wheel --wheel-dir=/wheels -r /tmp/requirements.txt
-
-# Instalar desde las ruedas locales para evitar descargas innecesarias.
-RUN python3 -m pip install --no-index --find-links=/wheels -r /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
 
 WORKDIR /workspace/ws_py
 
