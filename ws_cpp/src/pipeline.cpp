@@ -85,11 +85,26 @@ bool cargarPresets(const std::string& filename) {
 cv::Mat processImage(const cv::Mat& input, const AppSettings& config, cv::Rect& applied_roi) {
     if (input.empty()) return input;
 
-    // 1. ROI es puramente visual, no recortamos la imagen
-    int safe_x = std::clamp(config.roi_x, 0, input.cols - 1);
-    int safe_y = std::clamp(config.roi_y, 0, input.rows - 1);
-    int safe_w = std::clamp(config.roi_width, 1, input.cols - safe_x);
-    int safe_h = std::clamp(config.roi_height, 1, input.rows - safe_y);
+    // 1. ROI es puramente visual, no recortamos la imagen.
+    // Los valores en config ahora se interpretan como porcentajes (0 a 100)
+    int x_pct = std::clamp(config.roi_x, 0, 100);
+    int y_pct = std::clamp(config.roi_y, 0, 100);
+    int w_pct = std::clamp(config.roi_width, 1, 100);
+    int h_pct = std::clamp(config.roi_height, 1, 100);
+
+    int safe_x = (x_pct * input.cols) / 100;
+    int safe_y = (y_pct * input.rows) / 100;
+    
+    // Evitamos desbordamientos y garantizamos al menos 1 pixel
+    safe_x = std::clamp(safe_x, 0, input.cols - 1);
+    safe_y = std::clamp(safe_y, 0, input.rows - 1);
+    
+    int safe_w = (w_pct * input.cols) / 100;
+    int safe_h = (h_pct * input.rows) / 100;
+    
+    safe_w = std::clamp(safe_w, 1, input.cols - safe_x);
+    safe_h = std::clamp(safe_h, 1, input.rows - safe_y);
+
     applied_roi = cv::Rect(safe_x, safe_y, safe_w, safe_h);
     
     // Clonamos toda la imagen para aplicarle los filtros al 100% de los píxeles

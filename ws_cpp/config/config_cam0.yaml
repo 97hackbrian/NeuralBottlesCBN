@@ -2,10 +2,10 @@
 ---
 camera_width: 1280
 camera_height: 720
-roi_x: 637
-roi_y: 100
-roi_width: 400
-roi_height: 400
+roi_x: 35
+roi_y: 43
+roi_width: 13
+roi_height: 17
 resize_enable: 1
 resize_width: 288
 resize_height: 144

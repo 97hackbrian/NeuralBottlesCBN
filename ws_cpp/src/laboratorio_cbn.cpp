@@ -267,13 +267,13 @@ int main(int argc, char** argv) {
         }
 
         if (ImGui::CollapsingHeader("ROI Visual & Resize", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::SliderInt("X", &g_settings.roi_x, 0, 1920);
-            ImGui::SliderInt("Y", &g_settings.roi_y, 0, 1080);
-            ImGui::InputInt("Ancho", &g_settings.roi_width);
-            ImGui::InputInt("Alto", &g_settings.roi_height);
+            ImGui::SliderInt("X (%)", &g_settings.roi_x, 0, 100);
+            ImGui::SliderInt("Y (%)", &g_settings.roi_y, 0, 100);
+            ImGui::SliderInt("Ancho (%)", &g_settings.roi_width, 1, 100);
+            ImGui::SliderInt("Alto (%)", &g_settings.roi_height, 1, 100);
             
-            g_settings.roi_width = std::max(1, g_settings.roi_width);
-            g_settings.roi_height = std::max(1, g_settings.roi_height);
+            g_settings.roi_width = std::clamp(g_settings.roi_width, 1, 100);
+            g_settings.roi_height = std::clamp(g_settings.roi_height, 1, 100);
 
             ImGui::Separator();
             ImGui::Checkbox("Activar Resize", &b_resize);

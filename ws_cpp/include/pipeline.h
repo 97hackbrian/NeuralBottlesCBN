@@ -10,10 +10,10 @@ struct AppSettings {
     int camera_width = 1280;
     int camera_height = 720;
 
-    int roi_x = 100;
-    int roi_y = 100;
-    int roi_width = 400;
-    int roi_height = 400;
+    int roi_x = 0;
+    int roi_y = 0;
+    int roi_width = 100;
+    int roi_height = 100;
 
     int resize_enable = 0;
     int resize_width = 640;
