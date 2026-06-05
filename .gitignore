@@ -70,6 +70,7 @@ Testing/
 
 # Python datasets, runs and model weights
 ws_py/datasets/*
+ws_py/dataset/*
 !ws_py/datasets/.gitkeep
 ws_py/runs/*
 !ws_py/runs/.gitkeep
