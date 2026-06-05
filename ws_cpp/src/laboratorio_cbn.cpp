@@ -174,6 +174,15 @@ int main(int argc, char** argv) {
     cv::Mat frame;
     GLuint camera_texture = 0;
 
+    // Dataset Preview State
+    int dataset_source_cam_idx = 0;
+    std::vector<std::string> dataset_files;
+    int dataset_preview_idx = 0;
+    int loaded_dataset_idx = -1;
+    cv::Mat current_raw_image;
+    GLuint dataset_texture = 0;
+    bool show_dataset_preview = false;
+
     // ========================================================================
     // Main interaction loop
     // ========================================================================
@@ -229,6 +238,7 @@ int main(int argc, char** argv) {
             if (ImGui::Button("Refrescar Dispositivos", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 available_cameras = getAvailableCameras();
                 if (current_camera_idx >= available_cameras.size()) current_camera_idx = 0;
+                if (dataset_source_cam_idx >= available_cameras.size()) dataset_source_cam_idx = 0;
             }
             ImGui::Spacing();
             
@@ -335,10 +345,71 @@ int main(int argc, char** argv) {
                 g_settings.burst_recording_enable = b_burst ? 0 : 1;
             }
             ImGui::PopStyleColor(2);
+        }
+
+        if (ImGui::CollapsingHeader("Procesamiento de Dataset", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (dataset_source_cam_idx >= available_cameras.size()) dataset_source_cam_idx = 0;
+            std::string combo_preview_ds = "Cámara " + std::to_string(available_cameras[dataset_source_cam_idx]);
+            if (ImGui::BeginCombo("Origen RAW", combo_preview_ds.c_str())) {
+                for (int n = 0; n < available_cameras.size(); n++) {
+                    bool is_selected = (dataset_source_cam_idx == n);
+                    std::string cam_name = "Cámara " + std::to_string(available_cameras[n]);
+                    if (ImGui::Selectable(cam_name.c_str(), is_selected)) {
+                        dataset_source_cam_idx = n;
+                        dataset_files.clear();
+                        show_dataset_preview = false;
+                    }
+                    if (is_selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+
+            if (ImGui::Button("Open Dataset", ImVec2(ImGui::GetContentRegionAvail().x, 30))) {
+                int ds_cam_id = available_cameras[dataset_source_cam_idx];
+                std::string input_dir = getWorkspacePath("../../ws_py/dataset/raw/cam" + std::to_string(ds_cam_id) + "/");
+                
+                if (!std::filesystem::exists(input_dir)) {
+                    std::filesystem::create_directories(input_dir);
+                    std::cout << "[INFO] Carpeta de origen creada automaticamente en: " << input_dir << std::endl;
+                    std::cout << "[INFO] Por favor, coloca tus imagenes crudas (.jpg/.png) en esa carpeta y vuelve a presionar 'Open Dataset'." << std::endl;
+                    dataset_files.clear();
+                    show_dataset_preview = false;
+                } else {
+                    dataset_files.clear();
+                    std::vector<cv::String> temp;
+                    std::vector<std::string> exts = { "*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG" };
+                    for (const auto& ext : exts) {
+                        cv::glob(input_dir + ext, temp, false);
+                        for(const auto& file : temp) {
+                            dataset_files.push_back(file);
+                        }
+                        temp.clear();
+                    }
+                    
+                    if (dataset_files.empty()) {
+                        std::cout << "[INFO] No se encontraron imagenes en " << input_dir << std::endl;
+                        show_dataset_preview = false;
+                    } else {
+                        std::cout << "[INFO] Dataset cargado: " << dataset_files.size() << " imagenes." << std::endl;
+                        dataset_preview_idx = 0;
+                        loaded_dataset_idx = -1; // force reload
+                        show_dataset_preview = true;
+                    }
+                }
+            }
+
+            if (show_dataset_preview && !dataset_files.empty()) {
+                ImGui::SliderInt("Imagen", &dataset_preview_idx, 0, dataset_files.size() - 1);
+            }
+
             ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
             if (ImGui::Button("Process Dataset", ImVec2(ImGui::GetContentRegionAvail().x, 30))) {
+                int ds_cam_id = available_cameras[dataset_source_cam_idx];
                 std::cout << "[INFO] Procesando dataset manualmente por UI..." << std::endl;
-                processDataset(g_settings, active_cam_id);
+                processDataset(g_settings, ds_cam_id);
             }
         }
 
@@ -398,6 +469,50 @@ int main(int argc, char** argv) {
         }
         ImGui::EndChild(); // Fin panel derecho
 
+        // -------------------------------------------------------
+        // VENTANA PREVIEW DATASET
+        // -------------------------------------------------------
+        if (show_dataset_preview && !dataset_files.empty()) {
+            if (dataset_preview_idx != loaded_dataset_idx) {
+                current_raw_image = cv::imread(dataset_files[dataset_preview_idx]);
+                loaded_dataset_idx = dataset_preview_idx;
+            }
+
+            if (!current_raw_image.empty()) {
+                cv::Rect ds_applied_roi;
+                cv::Mat ds_processed = processImage(current_raw_image, g_settings, ds_applied_roi);
+                
+                if (ds_processed.channels() == 1) {
+                    cv::cvtColor(ds_processed, ds_processed, cv::COLOR_GRAY2BGR);
+                }
+                cv::rectangle(ds_processed, ds_applied_roi, cv::Scalar(0, 255, 0), 3);
+
+                if (dataset_texture != 0) {
+                    glDeleteTextures(1, &dataset_texture);
+                    dataset_texture = 0;
+                }
+                dataset_texture = MatToTexture(ds_processed);
+
+                ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Previsualizador Dataset", &show_dataset_preview);
+                ImVec2 avail_size = ImGui::GetContentRegionAvail();
+                if (avail_size.x > 0 && avail_size.y > 0) {
+                    float aspect = (float)ds_processed.cols / (float)ds_processed.rows;
+                    ImVec2 image_size = ImVec2(avail_size.x, avail_size.x / aspect);
+                    if (image_size.y > avail_size.y) {
+                        image_size.y = avail_size.y;
+                        image_size.x = avail_size.y * aspect;
+                    }
+                    ImVec2 cursor_pos = ImGui::GetCursorPos();
+                    cursor_pos.x += (avail_size.x - image_size.x) * 0.5f;
+                    cursor_pos.y += (avail_size.y - image_size.y) * 0.5f;
+                    ImGui::SetCursorPos(cursor_pos);
+                    ImGui::Image((ImTextureID)(intptr_t)dataset_texture, image_size);
+                }
+                ImGui::End();
+            }
+        }
+
         ImGui::End(); // Fin ventana principal Laboratorio CBN
 
         // -------------------------------------------------------
@@ -416,6 +531,7 @@ int main(int argc, char** argv) {
 
     // Free resources on close
     if (camera_texture != 0) glDeleteTextures(1, &camera_texture);
+    if (dataset_texture != 0) glDeleteTextures(1, &dataset_texture);
     
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
