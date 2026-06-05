@@ -8,26 +8,13 @@ services:
       context: .
       target: python_env
       args:
-        GPU_BACKEND: rocm  # cpu | rocm | cuda
+        GPU_BACKEND: cuda  # cpu | rocm | cuda
     working_dir: /workspace/ws_py
     volumes:
       - ./ws_py:/workspace/ws_py
-    # --- GPU AMD ROCm (RX 580 / Vega / RDNA) ---
+    # --- GPU NVIDIA ---
     devices:
-      - "/dev/kfd:/dev/kfd"
-      - "/dev/dri:/dev/dri"
-    group_add:
-      - video
-      - "989"  # GID del grupo 'render' del host (no existe dentro de debian:12-slim)
-    environment:
-      - HSA_OVERRIDE_GFX_VERSION=8.0.3
-    # --- GPU NVIDIA (descomentar si aplica y comentar la sección AMD) ---
-    # Cambiar GPU_BACKEND a 'cuda' en build.args, luego:
-    #   devices:
-    #     - nvidia.com/gpu=all
-    # Requisitos previos NVIDIA:
-    #   1. sudo apt-get install -y nvidia-container-toolkit
-    #   2. sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+      - nvidia.com/gpu=all
 
   # [MÁQUINA DE DESARROLLO] - Prueba de Inferencia C++ Local (Compilación Nativa)
   cbn_test_cpp:
