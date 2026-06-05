@@ -84,6 +84,6 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 
 ### 6.5 Problemas conocidos pendientes
 * **GPU no disponible en contenedores:** Podman 3.x (default en Ubuntu 22.04) no soporta CDI (Container Device Interface). Se requiere Podman ≥4.1 o configurar OCI hooks manualmente con `nvidia-ctk runtime configure --runtime=podman`. Mientras tanto, el entrenamiento opera exclusivamente en CPU.
-* **Auto-actualización de OpenVINO:** Ultralytics auto-actualizó OpenVINO de `2023.3.0` a `2026.2.0` durante el smoke test. Esto **rompe la paridad** con la etapa C++ que depende de OpenVINO 2023.3.0. Se debe anclar `openvino==2023.3.0` en `ws_py/requirements.txt` y bloquear la auto-actualización.
+* **Auto-actualización de OpenVINO (RESUELTO):** Ultralytics intentaba auto-actualizar OpenVINO de `2023.3.0` a `2026.2.0` durante la exportación. Esto se bloqueó inyectando un *monkey-patch* (`ultralytics.utils.checks.check_requirements = lambda *args, **kwargs: None`) en `test_env.py` y `export_int8.py` justo antes de importar YOLO, preservando la paridad con la etapa C++.
 * **Driver de almacenamiento Podman:** `ERRO graph driver "overlay" overwritten by "vfs"`. La base de datos local de Podman se creó con `vfs` pero la configuración pide `overlay`. Solución: `podman system reset` (elimina imágenes y contenedores existentes).
 * **Red CNI:** `WARN plugin firewall does not support config version "1.0.0"`. No bloquea la ejecución, es un aviso de incompatibilidad menor en la configuración de red.

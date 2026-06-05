@@ -1,6 +1,9 @@
 import shutil
 from pathlib import Path
 
+import ultralytics.utils.checks
+# Bloqueo de auto-actualización de Ultralytics para preservar OpenVINO 2023.3.0
+ultralytics.utils.checks.check_requirements = lambda *args, **kwargs: None
 from ultralytics import YOLO
 
 

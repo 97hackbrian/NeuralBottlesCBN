@@ -1,7 +1,9 @@
 import sys
 import torch
+import ultralytics.utils.checks
+# Bloqueo de auto-actualización de Ultralytics para preservar OpenVINO 2023.3.0
+ultralytics.utils.checks.check_requirements = lambda *args, **kwargs: None
 from ultralytics import YOLO
-
 def auditar_entorno():
     print("--- Auditoría de Entorno de Entrenamiento (MLOps) ---")
     print(f"Versión de Python: {sys.version.split()[0]}")
