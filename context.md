@@ -15,7 +15,7 @@ El sistema opera bajo el motor de contenedores **Podman** (Rootless, Daemonless)
 * **SO Base:** `debian:12-slim` (Forzado para obtener Python 3.11, compatible con precompilados `.whl` de Numpy y librerías ML).
 * **Herramientas Nativas:** `build-essential`, `python3-dev` (para compilación de dependencias si fallan los wheels).
 * **Framework de ML:** `ultralytics` (**YOLO26** en versión flotante `>=8.3`, mandatorio para habilitar la API `safe_globals` y evitar el colapso de seguridad `weights_only=True` introducido en PyTorch 2.6).
-* **Aceleración:** CUDA **no operativo aún** dentro del contenedor. `podman-compose` no soporta la sintaxis CDI (`--device nvidia.com/gpu=all`) ni `deploy > resources > reservations > devices`. El entrenamiento actual opera en CPU.
+* **Aceleración Multi-GPU:** Soporta AMD ROCm y NVIDIA CUDA mediante `ARG GPU_BACKEND` en el Dockerfile (`cpu` | `rocm` | `cuda`). PyTorch se instala con el index URL correcto antes de Ultralytics. El passthrough de dispositivos GPU se hace vía Podman 5.8.2 CDI (`/dev/kfd`, `/dev/dri` para ROCm; `nvidia.com/gpu=all` para NVIDIA). Para la RX 580 (gfx803, legacy) se aplica `HSA_OVERRIDE_GFX_VERSION=8.0.3`.
 * **Transpilador:** `openvino==2023.3.0` y `openvino-dev==2023.3.0` (Anclados estrictamente por retrocompatibilidad con la Etapa C++).
 
 ### Etapa 2 y 3: Compilación C++ (`cpp_base` / `cbn_builder`)
@@ -47,7 +47,7 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 2.  **Error 404 Hello World:** Resuelto aplicando sintaxis TOML V2 a los registros de ingesta OCI (`unqualified-search-registries = ["docker.io", "quay.io"]`).
 3.  **Crash de Seguridad PyTorch 2.6:** Resuelto liberando el *version pinning* de `ultralytics` para que el sistema descargue **YOLO26**, el cual es compatible con la nueva API de deserialización segura de tensores.
 4.  **Paridad C++/Python:** OpenVINO mantenido rígidamente en 2023.3.0 en ambos ecosistemas para evitar un "IR Version Mismatch" fatal al momento de ejecutar la inferencia en el borde.
-5.  **GPU en contenedores Podman (⚠️ NO RESUELTO):** `podman-compose` no soporta passthrough de GPU ni por `deploy.resources.reservations.devices` ni por CDI (`nvidia.com/gpu=all` en `devices`). El método manual `podman run --device nvidia.com/gpu=all` también falla con `stat nvidia.com/gpu=all: no such file or directory`, lo que indica que Podman 3.x (versión de Ubuntu 22.04) no soporta CDI (requiere Podman ≥4.1). **Solución pendiente:** actualizar Podman a 4.x+ o configurar OCI hooks con `nvidia-ctk runtime configure --runtime=podman`.
+5.  **GPU en contenedores Podman (✅ RESUELTO):** Podman 5.8.2 soporta CDI nativamente. Se implementó soporte multi-GPU (AMD ROCm + NVIDIA CUDA + CPU fallback) mediante `ARG GPU_BACKEND` en el Dockerfile. Para ROCm, se pasan `/dev/kfd` y `/dev/dri` como devices en `docker-compose.yaml`. Para NVIDIA, se usa CDI (`nvidia.com/gpu=all`) previa generación de `/etc/cdi/nvidia.yaml`. `train.py` detecta automáticamente el backend (ROCm vía `torch.version.hip`, CUDA vía `torch.version.cuda`) con `--device auto`.
 
 ## 6. Estado Actual del Repositorio y Modificaciones Recientes
 
@@ -68,9 +68,9 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
   - `prepare_dataset.py` maneja divisiones train/val y data augmentation (Albumentations) soportando imágenes de fondo sin etiquetas.
   - `train.py` entrena el modelo usando `argparse` para consumir el yaml generado dinámicamente.
   - `export_int8.py` se refactorizó con `argparse` (recibe `--data` y `--weights`) para resolver un bug crítico de calibración, exportando exitosamente los pesos finales a formato OpenVINO INT8 y auto-copiándolos a la carpeta C++ de producción.
-* `ws_py/test/test_env.py` referencia `YOLO('yolo11n.pt')`, lo que debe verificarse porque puede no coincidir con el artefacto real esperado para esta línea de trabajo.
-* `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y compilación local en C++ (ahora validando con `cbn_camera_test`); `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
-* **El entrenamiento YOLO26 funciona correctamente pero solo en CPU.** La GPU NVIDIA no es accesible desde dentro del contenedor Podman.
+* `ws_py/test/test_env.py` detecta y reporta tanto ROCm (AMD) como CUDA (NVIDIA) además de la variable `GPU_BACKEND`.
+* `docker-compose.yaml` mantiene dos flujos: `cbn_train` para entrenamiento con soporte multi-GPU (ROCm/CUDA/CPU); `cbn_test_cpp` para pruebas C++; `cbn_edge` para producción.
+* **El entrenamiento YOLO26 soporta GPU AMD (ROCm) y NVIDIA (CUDA)** con detección automática. CPU se usa como fallback.
 
 ### 6.3 Flujo recomendado para agentes futuros
 * Antes de editar, leer este `context.md`, `Dockerfile`, `docker-compose.yaml`, `ws_py/requirements.txt` y el árbol de `ws_cpp/` para confirmar si hubo cambios nuevos.
@@ -87,7 +87,7 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * El trabajo futuro debe centrarse exclusivamente en conectar los modelos YOLO exportados (`cbn_model.xml`/`.bin`) con el pipeline de inferencia nativa en C++, escribiendo la lógica de ejecución OpenVINO para la máquina industrial.
 
 ### 6.5 Problemas conocidos pendientes
-* **GPU no disponible en contenedores:** Podman 3.x (default en Ubuntu 22.04) no soporta CDI (Container Device Interface). Se requiere Podman ≥4.1 o configurar OCI hooks manualmente con `nvidia-ctk runtime configure --runtime=podman`. Mientras tanto, el entrenamiento opera exclusivamente en CPU.
+* **GPU AMD RX 580 (gfx803) — hardware legacy:** La RX 580 fue eliminada del soporte oficial de ROCm a partir de la versión 6.0. Se fuerza compatibilidad con `HSA_OVERRIDE_GFX_VERSION=8.0.3`. Puede haber inestabilidad en operaciones avanzadas. Para GPUs Vega/RDNA/RDNA2+ no se necesita este workaround.
 * **Auto-actualización de OpenVINO (RESUELTO):** Ultralytics intentaba auto-actualizar OpenVINO de `2023.3.0` a `2026.2.0` durante la exportación. Esto se bloqueó inyectando un *monkey-patch* (`ultralytics.utils.checks.check_requirements = lambda *args, **kwargs: None`) en `test_env.py` y `export_int8.py` justo antes de importar YOLO, preservando la paridad con la etapa C++.
 * **Driver de almacenamiento Podman:** `ERRO graph driver "overlay" overwritten by "vfs"`. La base de datos local de Podman se creó con `vfs` pero la configuración pide `overlay`. Solución: `podman system reset` (elimina imágenes y contenedores existentes).
 * **Red CNI:** `WARN plugin firewall does not support config version "1.0.0"`. No bloquea la ejecución, es un aviso de incompatibilidad menor en la configuración de red.

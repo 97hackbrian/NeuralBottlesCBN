@@ -43,27 +43,50 @@ NeuralBottlesCBN/
 
 El flujo de Machine Learning se ejecuta estrictamente dentro del contenedor `cbn_train`, el cual empaqueta PyTorch, Ultralytics (YOLO) y las herramientas de OpenVINO en un entorno Debian aislado. ¡No instales dependencias localmente!
 
+### Selección de GPU (Build Time)
+
+El contenedor soporta tres backends de aceleración. Selecciona el que corresponda a tu hardware editando `GPU_BACKEND` en `docker-compose.yaml` o pasándolo como build arg:
+
+```bash
+# AMD ROCm (RX 580, Vega, RDNA) — default en docker-compose.yaml
+podman-compose build --build-arg GPU_BACKEND=rocm cbn_train
+
+# NVIDIA CUDA (GTX/RTX)
+podman-compose build --build-arg GPU_BACKEND=cuda cbn_train
+
+# CPU solamente (sin GPU)
+podman-compose build --build-arg GPU_BACKEND=cpu cbn_train
+```
+
+> **⚠️ Nota AMD RX 580:** Esta GPU (gfx803) es hardware legacy para ROCm. Se usa `HSA_OVERRIDE_GFX_VERSION=8.0.3` para forzar compatibilidad. Para GPUs Vega/RDNA más nuevas, esta variable no es necesaria.
+
+> **⚠️ Nota NVIDIA:** Requiere `nvidia-container-toolkit` instalado y CDI generado: `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`. Además, descomentar la sección NVIDIA en `docker-compose.yaml`.
+
 ### Comandos del Pipeline:
 
 1. **Construir el entorno de entrenamiento:**
-   Compila las capas con dependencias pesadas optimizadas en caché.
    ```bash
    podman-compose build cbn_train
    ```
 
-2. **Preparar y Aumentar el Dataset:**
+2. **Verificar detección de GPU:**
+   ```bash
+   podman-compose run --rm cbn_train python3 test/test_env.py
+   ```
+
+3. **Preparar y Aumentar el Dataset:**
    Toma las imágenes de la cámara (crudos + txt), hace un split de entrenamiento/validación y genera el YAML. El flag `--offline-aug` aplica transformaciones extremas (blur, ruido, giros) simulando el entorno de la fábrica.
    ```bash
    podman-compose run --rm cbn_train python3 prepare_dataset.py --input-dir dataset/lote_1 --offline-aug
    ```
 
-3. **Ejecutar el Entrenamiento:**
-   Inicia el ajuste fino de la arquitectura YOLO utilizando el dataset generado en el paso anterior.
+4. **Ejecutar el Entrenamiento:**
+   Inicia el ajuste fino de la arquitectura YOLO. La GPU se detecta automáticamente (`--device auto` es el default).
    ```bash
    podman-compose run --rm cbn_train python3 train.py --data dataset/lote_1_done/cbn_dataset.yaml --epochs 50 --batch 16
    ```
 
-4. **Exportar y Cuantizar a Producción (OpenVINO INT8):**
+5. **Exportar y Cuantizar a Producción (OpenVINO INT8):**
    Toma los mejores pesos del entrenamiento (`best.pt`), los cuantiza a enteros de 8-bits para máxima aceleración en el procesador Celeron J1900, y auto-copia el modelo resultante a la carpeta C++ (`ws_cpp/models/`).
    ```bash
    podman-compose run --rm cbn_train python3 export_int8.py --data dataset/lote_1_done/cbn_dataset.yaml

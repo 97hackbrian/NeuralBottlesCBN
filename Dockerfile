@@ -3,7 +3,14 @@
 # =========================================================================
 # SOLUCIÓN: Uso de Debian 12 para forzar la inyección de Python 3.11 (Compatible con OpenVINO y Numpy precompilado)
 FROM debian:12-slim AS python_env
+
+# Backend de GPU: cpu | rocm | cuda
+ARG GPU_BACKEND=cpu
 ENV DEBIAN_FRONTEND=noninteractive
+ENV GPU_BACKEND=${GPU_BACKEND}
+
+# Para ROCm con GPUs legacy (RX 580 / gfx803)
+ENV HSA_OVERRIDE_GFX_VERSION=8.0.3
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv python3-dev build-essential libgl1 libglib2.0-0 \
@@ -15,6 +22,17 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # SOLUCIÓN: Actualización explícita del motor de empaquetado previo a la descarga pesada
 RUN pip install --upgrade pip setuptools wheel
+
+# --- CAPA GPU: PyTorch con backend seleccionado ---
+# Se instala ANTES de ultralytics para que no descargue torch CPU.
+# Cada variante tiene un index URL diferente (~2.5GB).
+RUN if [ "$GPU_BACKEND" = "rocm" ]; then \
+      pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.1; \
+    elif [ "$GPU_BACKEND" = "cuda" ]; then \
+      pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124; \
+    else \
+      echo "Backend CPU seleccionado, torch se instalará vía ultralytics"; \
+    fi
 
 # --- CAPA PESADA (ultralytics, openvino, opencv) ---
 # Esta capa solo se reconstruye si cambias requirements_base.txt.

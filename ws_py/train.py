@@ -17,15 +17,26 @@ def parse_args():
     parser.add_argument("--weights", type=str, default=MODEL_WEIGHTS, help="Pesos base del modelo")
     parser.add_argument("--epochs", type=int, default=50, help="Número de épocas")
     parser.add_argument("--batch", type=int, default=16, help="Tamaño del batch")
-    parser.add_argument("--device", type=str, default="cpu", help="Dispositivo: 'cpu', '0' (GPU) o 'auto'")
+    parser.add_argument("--device", type=str, default="auto", help="Dispositivo: 'cpu', '0' (GPU) o 'auto' (detecta GPU automáticamente)")
     return parser.parse_args()
 
 def resolve_device(device: str) -> str:
+    """Detecta el acelerador disponible: ROCm (AMD), CUDA (NVIDIA) o CPU."""
     if device != "auto":
         return device
     try:
         import torch
-        return "0" if torch.cuda.is_available() else "cpu"
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            backend = getattr(torch.version, 'hip', None)
+            if backend:
+                print(f"[GPU] AMD ROCm {backend} detectado: {gpu_name}")
+            else:
+                print(f"[GPU] NVIDIA CUDA {torch.version.cuda} detectado: {gpu_name}")
+            return "0"
+        else:
+            print("[GPU] No se detectó GPU, usando CPU.")
+            return "cpu"
     except Exception:
         return "cpu"
 
