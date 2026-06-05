@@ -64,7 +64,10 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 
 ### 6.2 Estado funcional detectado
 * La etapa C++ es funcional: `ws_cpp/CMakeLists.txt` compila exitosamente el binario principal `laboratorio_cbn` (con interfaz gráfica ImGui, OpenCV y OpenGL) y el ejecutable de validación `cbn_camera_test`. La interfaz de laboratorio se ejecuta correctamente dentro del contenedor desplegando la ventana en el host.
-* **Entrenamiento Operativo:** `ws_py/train.py` fue implementado y ya contiene la lógica de entrenamiento para YOLO26. Recibe dinámicamente la ruta del dataset con el flag `--data`. `ws_py/export_int8.py` sigue pendiente de implementación.
+* **Pipeline MLOps Operativo:** La cadena completa en Python (Preparación, Entrenamiento y Exportación) está implementada y auditada sin bugs:
+  - `prepare_dataset.py` maneja divisiones train/val y data augmentation (Albumentations) soportando imágenes de fondo sin etiquetas.
+  - `train.py` entrena el modelo usando `argparse` para consumir el yaml generado dinámicamente.
+  - `export_int8.py` se refactorizó con `argparse` (recibe `--data` y `--weights`) para resolver un bug crítico de calibración, exportando exitosamente los pesos finales a formato OpenVINO INT8 y auto-copiándolos a la carpeta C++ de producción.
 * `ws_py/test/test_env.py` referencia `YOLO('yolo11n.pt')`, lo que debe verificarse porque puede no coincidir con el artefacto real esperado para esta línea de trabajo.
 * `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y compilación local en C++ (ahora validando con `cbn_camera_test`); `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
 * **El entrenamiento YOLO26 funciona correctamente pero solo en CPU.** La GPU NVIDIA no es accesible desde dentro del contenedor Podman.
@@ -79,8 +82,9 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * No comitear datasets, resultados de `runs/` ni pesos `.pt`; sólo mantener `.gitkeep` en directorios que deban sobrevivir vacíos.
 
 ### 6.4 Observaciones operativas
-* El repo se encuentra en un estado funcional avanzado tanto para la experimentación C++ (interfaz de laboratorio integrada con Dear ImGui) como para el entrenamiento del modelo, contando con scripts de data augmentation y entrenamiento optimizados.
-* El trabajo futuro debe centrarse en implementar la exportación a INT8 en `ws_py/export_int8.py`, conectar los modelos YOLO26 exportados con el pipeline de inferencia en C++, y refinar la arquitectura del detector para producción.
+* El repo se encuentra en un estado funcional avanzado tanto para la experimentación C++ (interfaz de laboratorio integrada con Dear ImGui) como para el entrenamiento del modelo.
+* **El pipeline completo de Python (`prepare`, `train`, `export`) está finalizado y libre de bugs.**
+* El trabajo futuro debe centrarse exclusivamente en conectar los modelos YOLO exportados (`cbn_model.xml`/`.bin`) con el pipeline de inferencia nativa en C++, escribiendo la lógica de ejecución OpenVINO para la máquina industrial.
 
 ### 6.5 Problemas conocidos pendientes
 * **GPU no disponible en contenedores:** Podman 3.x (default en Ubuntu 22.04) no soporta CDI (Container Device Interface). Se requiere Podman ≥4.1 o configurar OCI hooks manualmente con `nvidia-ctk runtime configure --runtime=podman`. Mientras tanto, el entrenamiento opera exclusivamente en CPU.
