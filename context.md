@@ -21,7 +21,7 @@ El sistema opera bajo el motor de contenedores **Podman** (Rootless, Daemonless)
 ### Etapa 2 y 3: Compilación C++ (`cpp_base` / `cbn_builder`)
 * **SO Base:** `debian:13-slim`.
 * **Cadena de Herramientas:** `cmake`, `ninja-build`, `gcc/g++`.
-* **Librerías C++:** `libopencv-dev`, Repositorio APT de Intel OpenVINO 2023.3.0.
+* **Librerías C++:** `libopencv-dev`, Repositorio APT de Intel OpenVINO 2023.3.0, `libglfw3-dev`, `libgl1-mesa-dev` (para Dear ImGui y OpenGL).
 * **Cross-Compilation:** Parametrizado explícitamente para la microarquitectura del Celeron con los flags `-msse4.2 -march=silvermont`.
 
 ### Etapa 4: Inferencia en Producción (`cbn_edge`)
@@ -57,11 +57,12 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * `.gitignore` fue extendido para ignorar contenido generado por `ws_py/datasets/`, `ws_py/runs/` y todos los archivos `*.pt`.
 * Se agregaron placeholders `.gitkeep` en carpetas vacías que deben preservarse en Git: `ws_py/dataset/`, `ws_py/datasets/` y `ws_py/runs/`.
 * `setup_podman.sh` actualizado: en Debian/Ubuntu instala `python3-pip` y ejecuta `pip3 install podman-compose` (con fallback `--break-system-packages` para PEP 668). Los registros OCI ahora usan formato TOML V2 (`unqualified-search-registries`).
-* `docker-compose.yaml`: la sección de GPU fue comentada con instrucciones para ejecución manual vía `podman run`. Además, se ajustó el comando del servicio para compilación C++ para compilar y ejecutar `cbn_camera_test`.
-* Se crearon las bases del entorno C++: `ws_cpp/CMakeLists.txt` ha sido inicializado para compilar un binario de prueba `cbn_camera_test` usando el nuevo código `ws_cpp/test/camera_test.cpp` que verifica el acceso y lectura de OpenCV.
+* `docker-compose.yaml`: Se añadió `network_mode: host` en `cbn_test_cpp` para solucionar fallos de resolución DNS (aardvark-dns) con Podman. El comando de compilación se actualizó para compilar y ejecutar `laboratorio_cbn`.
+* **Fusión de Entorno C++**: Se migró el código C++ del antiguo workspace (`laboratorio_cbn.cpp`, `pipeline.cpp`, `pipeline.h`) a `ws_cpp/src/` y `ws_cpp/include/`. Se estructuraron las configuraciones en `ws_cpp/config/` (migrando `config*.yaml` e `imgui.ini`).
+* `Dockerfile` y `CMakeLists.txt` actualizados: Se agregaron las dependencias gráficas (`libglfw3-dev`, `libgl1-mesa-dev`) en una nueva capa de caché y se configuró `FetchContent` en CMake para descargar e integrar `Dear ImGui`.
 
 ### 6.2 Estado funcional detectado
-* Se ha avanzado en la etapa C++: `ws_cpp/CMakeLists.txt` ahora compila un ejecutable de validación de hardware (`cbn_camera_test` a partir de `ws_cpp/test/camera_test.cpp`). Sin embargo, el binario principal `cbn_inference_node` aún no puede compilarse ya que `ws_cpp/src/main.cpp`, `ws_cpp/src/cbn_detector.cpp` y `ws_cpp/include/cbn_detector.hpp` continúan vacíos o pendientes de desarrollo.
+* La etapa C++ es funcional: `ws_cpp/CMakeLists.txt` compila exitosamente el binario principal `laboratorio_cbn` (con interfaz gráfica ImGui, OpenCV y OpenGL) y el ejecutable de validación `cbn_camera_test`. La interfaz de laboratorio se ejecuta correctamente dentro del contenedor desplegando la ventana en el host.
 * `ws_py/train.py` y `ws_py/export_int8.py` están vacíos; el servicio `cbn_train` hoy no realiza entrenamiento ni exportación real.
 * `ws_py/test/test_env.py` referencia `YOLO('yolo11n.pt')`, lo que debe verificarse porque puede no coincidir con el artefacto real esperado para esta línea de trabajo.
 * `docker-compose.yaml` mantiene dos flujos: `cbn_train` para etapa Python y compilación local en C++ (ahora validando con `cbn_camera_test`); `cbn_edge` depende de una imagen externa llamada `neuralbottles_edge:latest`.
@@ -77,8 +78,8 @@ Script de auditoría integral (Smoke Test). Instancia el entorno virtual, verifi
 * No comitear datasets, resultados de `runs/` ni pesos `.pt`; sólo mantener `.gitkeep` en directorios que deban sobrevivir vacíos.
 
 ### 6.4 Observaciones operativas
-* El repo está en una fase intermedia: la infraestructura de contenedores ya fue racionalizada parcialmente, pero la capa de aplicación aún no está implementada en C++ ni en Python.
-* El trabajo futuro debe centrarse en completar el binario C++, definir el pipeline de entrenamiento/exportación y cerrar la paridad OpenVINO entre Python y C++.
+* El repo se encuentra en un estado funcional avanzado para la experimentación C++: la infraestructura de contenedores fue racionalizada y la capa de aplicación C++ (interfaz de laboratorio) está integrada y operativa con Dear ImGui.
+* El trabajo futuro debe centrarse en conectar los modelos YOLO26 entrenados en Python con el pipeline de inferencia en C++, y refinar la arquitectura del detector para producción.
 
 ### 6.5 Problemas conocidos pendientes
 * **GPU no disponible en contenedores:** Podman 3.x (default en Ubuntu 22.04) no soporta CDI (Container Device Interface). Se requiere Podman ≥4.1 o configurar OCI hooks manualmente con `nvidia-ctk runtime configure --runtime=podman`. Mientras tanto, el entrenamiento opera exclusivamente en CPU.
