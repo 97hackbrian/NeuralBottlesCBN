@@ -30,6 +30,7 @@ struct AppSettings {
     int hist_eq_enable = 0;
 
     int burst_recording_enable = 0;
+    int burst_recording_freq_ms = 200;
 };
 
 // Global application settings state

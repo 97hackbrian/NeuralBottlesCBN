@@ -151,6 +151,8 @@ int main(int argc, char** argv) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    std::string imgui_ini_path = getWorkspacePath("../config/imgui.ini");
+    io.IniFilename = imgui_ini_path.c_str();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     
     // Setup Dark Mode
@@ -345,6 +347,10 @@ int main(int argc, char** argv) {
                 g_settings.burst_recording_enable = b_burst ? 0 : 1;
             }
             ImGui::PopStyleColor(2);
+            
+            ImGui::Spacing();
+            ImGui::InputInt("Frecuencia (ms)", &g_settings.burst_recording_freq_ms, 50, 100);
+            if (g_settings.burst_recording_freq_ms < 10) g_settings.burst_recording_freq_ms = 10; // Evitar que coloquen 0 o negativos
         }
 
         if (ImGui::CollapsingHeader("Procesamiento de Dataset", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -427,17 +433,43 @@ int main(int argc, char** argv) {
         if (g_settings.burst_recording_enable == 1) {
             static auto last_save = std::chrono::steady_clock::now();
             auto current_time = std::chrono::steady_clock::now();
-            if (std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_save).count() >= 200) {
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_save).count() >= g_settings.burst_recording_freq_ms) {
                 last_save = current_time;
                 std::string output_dir = getWorkspacePath("../../ws_py/dataset/Captures/cam" + std::to_string(active_cam_id) + "/");
-                std::filesystem::create_directories(output_dir);
-                char time_buf[64];
-                std::time_t t = std::time(nullptr);
-                std::strftime(time_buf, sizeof(time_buf), "%Y%m%d_%H%M%S", std::localtime(&t));
+                if (!std::filesystem::exists(output_dir)) {
+                    std::filesystem::create_directories(output_dir);
+                }
+                
+                static int last_cam_id = -1;
                 static int burst_count = 0;
-                std::string filepath = output_dir + "frame_" + time_buf + "_" + std::to_string(burst_count++) + ".jpg";
+                
+                // Recalcular contador si cambiamos de camara o es la primera vez que entramos
+                if (last_cam_id != active_cam_id) {
+                    burst_count = 0;
+                    for (const auto& entry : std::filesystem::directory_iterator(output_dir)) {
+                        std::string fname = entry.path().filename().string();
+                        // Extraemos el numero final si existe (ej. frame_00015.jpg)
+                        if (fname.find("frame_") != std::string::npos && fname.find(".jpg") != std::string::npos) {
+                            try {
+                                size_t start = fname.find_last_of('_') + 1;
+                                size_t end = fname.find(".jpg");
+                                int num = std::stoi(fname.substr(start, end - start));
+                                if (num >= burst_count) burst_count = num + 1;
+                            } catch (...) {} // ignorar archivos malformados
+                        }
+                    }
+                    last_cam_id = active_cam_id;
+                }
+
+                char filename[64];
+                snprintf(filename, sizeof(filename), "frame_%05d.jpg", burst_count++);
+                std::string filepath = output_dir + filename;
                 cv::imwrite(filepath, processed); 
             }
+        } else {
+            // Permite que al volver a grabar se re-escanee por si el usuario borró o añadió archivos a mano
+            static int last_cam_id = -1;
+            last_cam_id = -1;
         }
 
         // Pinta el ROI verde de forma puramente visual

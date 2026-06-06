@@ -47,6 +47,7 @@ void guardarPresets(const std::string& filename) {
         fs << "clahe_clip_limit" << g_settings.clahe_clip_limit;
         fs << "hist_eq_enable" << g_settings.hist_eq_enable;
         fs << "burst_recording_enable" << g_settings.burst_recording_enable;
+        fs << "burst_recording_freq_ms" << g_settings.burst_recording_freq_ms;
 
         fs.release();
         std::cout << "[INFO] Presets guardados exitosamente en: " << filename << std::endl;
@@ -85,6 +86,9 @@ bool cargarPresets(const std::string& filename) {
         fs["clahe_clip_limit"] >> g_settings.clahe_clip_limit;
         fs["hist_eq_enable"] >> g_settings.hist_eq_enable;
         fs["burst_recording_enable"] >> g_settings.burst_recording_enable;
+        if (!fs["burst_recording_freq_ms"].empty()) {
+            fs["burst_recording_freq_ms"] >> g_settings.burst_recording_freq_ms;
+        }
 
         fs.release();
         std::cout << "[INFO] Presets cargados exitosamente desde: " << filename << std::endl;
