@@ -61,8 +61,17 @@ int main(int argc, char** argv) {
         return 1;
     }
     std::cout << "[DEBUG] Camara abierta.\n";
+    // Forzar decodificación por hardware (MJPG) para evitar cuellos de botella de ancho de banda USB
+    // que causan que el driver rechace resoluciones altas (como 1920x1080)
+    capture.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    
     capture.set(cv::CAP_PROP_FRAME_WIDTH, g_settings.camera_width);
     capture.set(cv::CAP_PROP_FRAME_HEIGHT, g_settings.camera_height);
+
+    int actual_w = (int)capture.get(cv::CAP_PROP_FRAME_WIDTH);
+    int actual_h = (int)capture.get(cv::CAP_PROP_FRAME_HEIGHT);
+    std::cout << "[DEBUG] Resolucion solicitada: " << g_settings.camera_width << "x" << g_settings.camera_height << "\n";
+    std::cout << "[DEBUG] Resolucion REAL de la camara: " << actual_w << "x" << actual_h << "\n";
 
     if (show_ui) {
         cv::namedWindow("CBN Inference Node", cv::WINDOW_NORMAL);

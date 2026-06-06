@@ -1,7 +1,7 @@
 %YAML:1.0
 ---
-camera_width: 1280
-camera_height: 720
+camera_width: 640
+camera_height: 360
 roi_x: 35
 roi_y: 43
 roi_width: 13
