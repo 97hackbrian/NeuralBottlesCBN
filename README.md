@@ -114,9 +114,15 @@ Debido a que el contenedor debe comunicarse con la pantalla principal, es **obli
    ```bash
    podman-compose run --rm cbn_test_cpp
    ```
-4. **Probar el nodo de inferencia puro en desarrollo:**
+4. **Probar el nodo de inferencia puro (solo modelo):**
    ```bash
-   podman-compose run --rm cbn_test_cpp /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja && ninja cbn_inference_node && cd .. && ./build/cbn_inference_node"
+   podman-compose run --rm cbn_test_cpp /bin/bash -lc "cd build && cmake .. -G Ninja && ninja cbn_inference_node && cd .. && ./build/cbn_inference_node"
+   ```
+
+5. **Ejecutar la Inferencia Principal con la lógica de negocio (Botellas y Casilleros):**
+   Este comando compilará (vía Ninja por velocidad extrema) el binario final `main` y lo ejecutará, abriendo la cámara y aplicando la validación (PASA/RECHAZADO) si se detectan los 12 espacios:
+   ```bash
+   podman-compose run --rm cbn_test_cpp /bin/bash -lc "cd build && cmake .. -G Ninja && ninja main && ./main --show"
    ```
 
 > **Nota:** En caso de fallos de descarga al compilar (DNS en Podman), el contenedor usa por defecto `network_mode: host` para resolver conexiones.
