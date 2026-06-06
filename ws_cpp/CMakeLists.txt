@@ -79,3 +79,20 @@ target_link_libraries(cbn_inference_node PRIVATE
     ${OpenCV_LIBS}
     openvino::runtime
 )
+
+
+
+# Nuevo ejecutable principal (Inferencia final con lógica)
+add_executable(main 
+    src/main.cpp
+    src/cbn_detector_inference.cpp
+    src/pipeline.cpp
+)
+target_include_directories(main PRIVATE 
+    include
+    ${OpenCV_INCLUDE_DIRS}
+)
+target_link_libraries(main PRIVATE 
+    ${OpenCV_LIBS}
+    openvino::runtime
+)

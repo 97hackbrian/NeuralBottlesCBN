@@ -94,6 +94,6 @@ COPY --from=cpp_builder_edge /opt/intel/openvino_2023.3.0.13775/extras/opencv/li
 RUN ldconfig
 
 # Extracción estrictamente del binario compilado en la Etapa 3
-COPY --from=cpp_builder_edge /workspace/ws_cpp/build/cbn_inference_node /app/
+COPY --from=cpp_builder_edge /workspace/ws_cpp/build/main /app/
 
-ENTRYPOINT ["./cbn_inference_node"]
+ENTRYPOINT ["./main"]

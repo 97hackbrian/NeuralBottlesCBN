@@ -37,7 +37,7 @@ services:
       - ./ws_cpp:/workspace/ws_cpp
       - ./ws_py/dataset:/workspace/ws_py/dataset
       - /tmp/.X11-unix:/tmp/.X11-unix:ro
-    command: /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja && ./cbn_test_inference"
+    command: /bin/bash -lc "mkdir -p build && cd build && cmake .. -G Ninja -DCMAKE_CXX_FLAGS='-O3 -march=native' && ninja main && ./main"
 
   # [MÁQUINA DE PRODUCCIÓN] - Inferencia Industrial
   cbn_edge:
