@@ -7,8 +7,8 @@ labels_path: "../config/labels.yaml"
 # Parametros de YOLO26
 input_width: 640
 input_height: 640
-conf_threshold: 0.1
-nms_threshold: 0.95
+conf_threshold: 0.4
+nms_threshold: 0.65
 
 # Lógica del casillero (Business Rules)
 target_total_slots: 12

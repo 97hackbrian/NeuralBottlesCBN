@@ -5,7 +5,7 @@ from ultralytics import YOLO
 # -----------------------------
 # PARAMETROS POR DEFECTO (Pueden sobreescribirse por CLI)
 # -----------------------------
-MODEL_WEIGHTS = "yolo26n.pt"  # YOLO26 no existe oficialmente, Ultralytics usará yolov8/11. Puedes cambiarlo a yolo11n.pt si usas v11
+MODEL_WEIGHTS = "yolo26m.pt"  # YOLO26 no existe oficialmente, Ultralytics usará yolov8/11. Puedes cambiarlo a yolo11n.pt si usas v11
 WORKERS = 2
 PROJECT = "runs/detect"
 RUN_NAME = "cbn_train"

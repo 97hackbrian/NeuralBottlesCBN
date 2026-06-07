@@ -9,6 +9,7 @@ services:
       target: python_env
       args:
         GPU_BACKEND: cuda  # cpu | rocm | cuda
+    shm_size: '8gb'
     working_dir: /workspace/ws_py
     volumes:
       - ./ws_py:/workspace/ws_py
@@ -26,7 +27,7 @@ services:
       target: cpp_base
     working_dir: /workspace/ws_cpp
     devices:
-      - "/dev/video0:/dev/video0" # Ajuste según su cámara web
+      - "/dev/video4:/dev/video0" # Ajuste según su cámara web
     group_add:
       - video
     environment:
