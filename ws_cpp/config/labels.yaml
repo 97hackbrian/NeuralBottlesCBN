@@ -1,4 +1,4 @@
 %YAML:1.0
 names:
-  - "completo"
-  - "incompleto"
+	0: cap
+	1: empty_slot

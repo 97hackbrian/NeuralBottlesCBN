@@ -14,7 +14,6 @@ from ultralytics import YOLO
 TARGET_CPP_MODELS_DIR = "../ws_cpp/models"
 TARGET_XML_NAME = "cbn_model.xml"
 TARGET_BIN_NAME = "cbn_model.bin"
-IMGSZ = 640
 
 
 def parse_args():
@@ -22,6 +21,7 @@ def parse_args():
     parser.add_argument("--weights", type=str, default="runs/detect/runs/detect/cbn_train/weights/best.pt", help="Ruta a los pesos entrenados")
     parser.add_argument("--data", type=str, required=True, help="Ruta al cbn_dataset.yaml usado en el entrenamiento (necesario para calibración INT8)")
     parser.add_argument("--no-int8", action="store_true", help="Desactiva la cuantización INT8 (exporta en FP16/FP32)")
+    parser.add_argument("--imgsz", type=int, default=640, help="Resolución de exportación (debe coincidir con la de entrenamiento)")
     return parser.parse_args()
 
 
@@ -38,7 +38,9 @@ def export_openvino(args) -> Path:
             format="openvino",
             int8=not args.no_int8,
             data=args.data,
-            imgsz=IMGSZ,
+            imgsz=args.imgsz,
+            half=False,
+            dynamic=False
         )
     )
 

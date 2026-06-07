@@ -6,7 +6,6 @@ from ultralytics import YOLO
 # PARAMETROS POR DEFECTO (Pueden sobreescribirse por CLI)
 # -----------------------------
 MODEL_WEIGHTS = "yolo26n.pt"  # YOLO26 no existe oficialmente, Ultralytics usará yolov8/11. Puedes cambiarlo a yolo11n.pt si usas v11
-IMGSZ = 640
 WORKERS = 2
 PROJECT = "runs/detect"
 RUN_NAME = "cbn_train"
@@ -17,6 +16,7 @@ def parse_args():
     parser.add_argument("--weights", type=str, default=MODEL_WEIGHTS, help="Pesos base del modelo")
     parser.add_argument("--epochs", type=int, default=50, help="Número de épocas")
     parser.add_argument("--batch", type=int, default=16, help="Tamaño del batch")
+    parser.add_argument("--imgsz", type=int, default=640, help="Resolución de entrada de la red (ej: 320, 640)")
     parser.add_argument("--device", type=str, default="auto", help="Dispositivo: 'cpu', '0' (GPU) o 'auto' (detecta GPU automáticamente)")
     return parser.parse_args()
 
@@ -49,7 +49,7 @@ def run_training(args) -> Path:
     result = model.train(
         data=args.data,
         epochs=args.epochs,
-        imgsz=IMGSZ,
+        imgsz=args.imgsz,
         batch=args.batch,
         workers=WORKERS,
         device=device,
