@@ -66,21 +66,6 @@ target_link_libraries(laboratorio_cbn PRIVATE
     OpenGL::GL
 )
 
-# Nodo de Producción (Headless / Edge)
-# Se usa para el despliegue en la máquina industrial Celeron
-add_executable(cbn_inference_node 
-    src/cbn_detector_inference.cpp
-)
-target_include_directories(cbn_inference_node PRIVATE 
-    include
-    ${OpenCV_INCLUDE_DIRS}
-)
-target_link_libraries(cbn_inference_node PRIVATE 
-    ${OpenCV_LIBS}
-    openvino::runtime
-)
-
-
 
 # Nuevo ejecutable principal (Inferencia final con lógica)
 add_executable(main 
