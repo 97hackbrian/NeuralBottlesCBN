@@ -11,5 +11,5 @@ conf_threshold: 0.4
 nms_threshold: 0.65
 
 # Lógica del casillero (Business Rules)
-target_total_slots: 12
-target_cap_count: 12
+target_total_slots: 24
+target_cap_count: 24
