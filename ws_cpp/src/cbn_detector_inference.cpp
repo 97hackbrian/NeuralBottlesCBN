@@ -76,31 +76,31 @@ bool CBNDetectorInference::init(const std::string& model_path, const std::string
 }
 
 std::vector<Detection> CBNDetectorInference::infer(const cv::Mat& image, float conf_thresh, float nms_thresh) {
-    std::cout << "[DEBUG] infer(): Inicio.\n";
+    // std::cout << "[DEBUG] infer(): Inicio.\n";
     if (image.empty()) return {};
 
     // 1. Preparar el input tensor
     cv::Mat resized_img;
     cv::resize(image, resized_img, cv::Size(input_width_, input_height_));
-    std::cout << "[DEBUG] infer(): Imagen redimensionada.\n";
+    // std::cout << "[DEBUG] infer(): Imagen redimensionada.\n";
 
     // Llenar el tensor de OpenVINO con los datos de la imagen BGR usando zero-copy
     ov::Tensor input_tensor(ov::element::u8, {1, (size_t)input_height_, (size_t)input_width_, 3}, resized_img.data);
     infer_request_.set_input_tensor(input_tensor);
-    std::cout << "[DEBUG] infer(): Tensor de entrada configurado.\n";
+    // std::cout << "[DEBUG] infer(): Tensor de entrada configurado.\n";
 
     // 2. Ejecutar inferencia
-    std::cout << "[DEBUG] infer(): Ejecutando inferencia OpenVINO...\n";
+    // std::cout << "[DEBUG] infer(): Ejecutando inferencia OpenVINO...\n";
     try {
         infer_request_.infer();
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] Exception en infer_request_.infer(): " << e.what() << "\n";
     }
-    std::cout << "[DEBUG] infer(): Inferencia OpenVINO terminada.\n";
+    // std::cout << "[DEBUG] infer(): Inferencia OpenVINO terminada.\n";
 
     // 3. Procesar salida
     ov::Tensor output_tensor = infer_request_.get_output_tensor();
-    std::cout << "[DEBUG] infer(): Tensor de salida obtenido.\n";
+    // std::cout << "[DEBUG] infer(): Tensor de salida obtenido.\n";
     const float* output_data = output_tensor.data<const float>();
     ov::Shape output_shape = output_tensor.get_shape();
 
@@ -120,7 +120,7 @@ std::vector<Detection> CBNDetectorInference::infer(const cv::Mat& image, float c
     if (output_shape[1] == 300 && output_shape[2] == 6) {
         // Formato con NMS embebido (YOLO26 / export nms=True): [1, 300, 6]
         // 6 campos: [xmin, ymin, xmax, ymax, conf, class_id]
-        std::cout << "[DEBUG] infer(): Parseando formato [1, 300, 6]\n";
+        // std::cout << "[DEBUG] infer(): Parseando formato [1, 300, 6]\n";
         for (size_t i = 0; i < 300; ++i) {
             float xmin = output_data[i * 6 + 0];
             float ymin = output_data[i * 6 + 1];
@@ -177,13 +177,13 @@ std::vector<Detection> CBNDetectorInference::infer(const cv::Mat& image, float c
         }
     }
 
-    std::cout << "[DEBUG] infer(): Anchors filtrados. Boxes=" << boxes.size() << "\n";
+    // std::cout << "[DEBUG] infer(): Anchors filtrados. Boxes=" << boxes.size() << "\n";
 
     std::vector<Detection> results;
 
     if (output_shape[1] == 300 && output_shape[2] == 6) {
         // YOLO26 ya tiene NMS embebido, así que devolvemos las cajas directamente
-        std::cout << "[DEBUG] infer(): Omitiendo NMS extra para formato YOLO26.\n";
+        // std::cout << "[DEBUG] infer(): Omitiendo NMS extra para formato YOLO26.\n";
         for (size_t i = 0; i < boxes.size(); ++i) {
             Detection d;
             d.box = boxes[i];
@@ -216,6 +216,6 @@ std::vector<Detection> CBNDetectorInference::infer(const cv::Mat& image, float c
         }
     }
 
-    std::cout << "[DEBUG] infer(): Fin.\n";
+    // std::cout << "[DEBUG] infer(): Fin.\n";
     return results;
 }

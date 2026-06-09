@@ -2,6 +2,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <iomanip>
 #include <opencv2/opencv.hpp>
 #include "pipeline.h"
 #include "cbn_detector_inference.hpp"
@@ -82,22 +83,35 @@ int main(int argc, char** argv) {
     std::cout << "[DEBUG] Entrando al loop...\n";
 
     while (true) {
+        auto t_start = std::chrono::steady_clock::now();
+
         if (!capture.read(frame) || frame.empty()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
-        std::cout << "[DEBUG] Frame capturado. Procesando...\n";
 
         // Aplicar pipeline de procesamiento visual (crop, blur, eq, etc.)
         cv::Mat processed = processImage(frame, g_settings, applied_roi);
 
-        std::cout << "[DEBUG] Frame procesado. Iniciando inferencia...\n";
         // Inferencia usando YOLO26
         auto detections = detector.infer(processed, conf_threshold, nms_threshold);
 
-        std::cout << "[DEBUG] Inferencia terminada. Detecciones: " << detections.size() << "\n";
         // Validar lógica de negocio de los casilleros
         auto resultado = CBNDetector::validarCasillero(detections, target_total, target_cap);
+
+        auto t_end = std::chrono::steady_clock::now();
+        std::chrono::duration<double, std::milli> frame_time = t_end - t_start;
+        double fps = 1000.0 / frame_time.count();
+
+        std::string verdict_str = "ESPERANDO CAJA...";
+        if (resultado.has_value()) {
+            verdict_str = resultado.value() ? "PASA (12 BOTELLAS)" : "RECHAZADO (INCOMPLETO)";
+        }
+
+        // Imprimir estadisticas en tiempo real sobre la misma linea
+        std::cout << "\r[INFO] FPS: " << std::fixed << std::setprecision(1) << fps 
+                  << " | Objetos: " << detections.size() 
+                  << " | Estado: " << verdict_str << "                 " << std::flush;
 
         if (show_ui) {
             // Si la imagen es en escala de grises, la convertimos a BGR para ver colores en cajas y texto
@@ -137,9 +151,9 @@ int main(int argc, char** argv) {
             // Modo consola (Headless)
             if (resultado.has_value()) {
                 if (resultado.value()) {
-                    std::cout << "[VEREDICTO] PASA - 12 botellas correctas\n";
+                    std::cout << "\n[VEREDICTO HISTORIAL] PASA - 12 botellas correctas\n";
                 } else {
-                    std::cout << "[VEREDICTO] RECHAZADO - Error en el casillero\n";
+                    std::cout << "\n[VEREDICTO HISTORIAL] RECHAZADO - Error en el casillero\n";
                 }
                 // Prevenir spam de log en la terminal si se queda la caja estacionada (opcional)
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
