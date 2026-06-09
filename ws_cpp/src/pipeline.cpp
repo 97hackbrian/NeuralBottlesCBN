@@ -10,7 +10,23 @@ std::string getWorkspacePath(const std::string& relative_to_build) {
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
     if (count != -1) {
         std::filesystem::path exe_path(std::string(result, (count > 0) ? count : 0));
-        std::filesystem::path target = exe_path.parent_path() / relative_to_build;
+        std::filesystem::path parent = exe_path.parent_path();
+        
+        std::string relative = relative_to_build;
+        
+        // Lógica adaptativa: Desarrollo (build/) vs Producción (/app)
+        // En desarrollo, parent es "build/", así que subir un nivel ("../") es correcto.
+        // En producción, parent es "/app", el cual YA contiene las carpetas "config/" y "models/".
+        // Si subimos un nivel en producción, salimos de /app hacia la raíz /.
+        if (parent == "/app") {
+            // Eliminar prefijos de navegación hacia atrás para mantenernos dentro de /app
+            while (relative.find("../") == 0) {
+                relative = relative.substr(3);
+            }
+            relative = "./" + relative;
+        }
+        
+        std::filesystem::path target = parent / relative;
         return target.lexically_normal().string();
     }
     return relative_to_build;
