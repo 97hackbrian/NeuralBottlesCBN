@@ -108,9 +108,17 @@ int main(int argc, char** argv) {
             verdict_str = resultado.value() ? "PASA (12 BOTELLAS)" : "RECHAZADO (INCOMPLETO)";
         }
 
+        int count_cap = 0;
+        int count_empty = 0;
+        for (const auto& d : detections) {
+            if (d.class_id == 0) count_cap++;
+            else if (d.class_id == 1) count_empty++;
+        }
+
         // Imprimir estadisticas en tiempo real sobre la misma linea
         std::cout << "\r[INFO] FPS: " << std::fixed << std::setprecision(1) << fps 
-                  << " | Objetos: " << detections.size() 
+                  << " | Tapas: " << count_cap 
+                  << " | Vacíos: " << count_empty 
                   << " | Estado: " << verdict_str << "                 " << std::flush;
 
         if (show_ui) {
