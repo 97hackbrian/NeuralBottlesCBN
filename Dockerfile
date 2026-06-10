@@ -57,7 +57,7 @@ FROM openvino/ubuntu22_dev:2023.3.0 AS cpp_base
 ENV DEBIAN_FRONTEND=noninteractive
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build pkg-config libopencv-dev ca-certificates \
+    build-essential cmake ninja-build pkg-config libopencv-dev ca-certificates gpiod \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -84,7 +84,7 @@ FROM openvino/ubuntu22_runtime:2023.3.0 AS edge_runtime
 ENV DEBIAN_FRONTEND=noninteractive
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
+    ca-certificates gpiod \
     && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -s /bin/bash cbn_user && usermod -aG video cbn_user
 WORKDIR /app

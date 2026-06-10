@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
 find_package(OpenVINO REQUIRED)
+find_package(Threads REQUIRED)
 
 # Find GLFW and OpenGL
 find_package(glfw3 REQUIRED)
@@ -81,3 +82,8 @@ target_link_libraries(main PRIVATE
     ${OpenCV_LIBS}
     openvino::runtime
 )
+
+# Test de GPIO
+add_executable(test_gpio src/test_gpio.cpp)
+target_include_directories(test_gpio PRIVATE include)
+target_link_libraries(test_gpio PRIVATE Threads::Threads)
