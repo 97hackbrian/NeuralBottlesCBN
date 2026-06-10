@@ -7,6 +7,7 @@
 #include "pipeline.h"
 #include "cbn_detector_inference.hpp"
 #include "cbn_detector.hpp"
+#include "cbn_io.h"
 
 // Helper para argumentos CLI
 bool hasFlag(int argc, char** argv, const std::string& flag) {
@@ -18,6 +19,9 @@ bool hasFlag(int argc, char** argv, const std::string& flag) {
 
 int main(int argc, char** argv) {
     std::cout << "[INFO] Iniciando Inferencia CBN Node...\n";
+    
+    // 0. Inicialización segura del hardware GPIO
+    cbn::fail_safe_reset();
     bool show_ui = hasFlag(argc, argv, "--show");
 
     // 1. Cargar configuraciones del pipeline (procesamiento de imagen)
@@ -82,6 +86,8 @@ int main(int argc, char** argv) {
     cv::Rect applied_roi;
     std::cout << "[DEBUG] Entrando al loop...\n";
 
+    bool piston_fired_for_current_box = false; // Bandera para no ametrallar el pistón por frame
+
     while (true) {
         auto t_start = std::chrono::steady_clock::now();
 
@@ -105,7 +111,22 @@ int main(int argc, char** argv) {
 
         std::string verdict_str = "ESPERANDO CAJA...";
         if (resultado.has_value()) {
-            verdict_str = resultado.value() ? "PASA (12 BOTELLAS)" : "RECHAZADO (INCOMPLETO)";
+            if (resultado.value()) {
+                verdict_str = "PASA (12 BOTELLAS)";
+                piston_fired_for_current_box = false; // Reseteamos si vemos una caja buena
+            } else {
+                verdict_str = "RECHAZADO (INCOMPLETO)";
+                
+                // Disparo físico del actuador solo 1 vez por caja mala detectada
+                if (!piston_fired_for_current_box) {
+                    std::cout << "\n[HARDWARE] ¡Casillero incompleto detectado! Activando Pistón (GPO2)...\n";
+                    cbn::pulse_gpo(cbn::GPO_2, 3000);
+                    piston_fired_for_current_box = true;
+                }
+            }
+        } else {
+            // Cuando ya no hay caja (se retiró), reseteamos la bandera
+            piston_fired_for_current_box = false;
         }
 
         int count_cap = 0;
@@ -168,6 +189,9 @@ int main(int argc, char** argv) {
             }
         }
     }
+
+    std::cout << "\n[INFO] Saliendo del programa, aplicando fail_safe_reset() al hardware...\n";
+    cbn::fail_safe_reset();
 
     return 0;
 }
