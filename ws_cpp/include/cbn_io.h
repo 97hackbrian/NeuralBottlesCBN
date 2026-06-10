@@ -18,13 +18,13 @@ enum State {
 };
 
 inline void write_gpo(Pin pin, State estado) {
-    std::string command = "gpioset --chip gpiochip0 " + std::to_string(pin) + "=" + std::to_string(estado) + " &";
+    std::string command = "gpioset gpiochip0 " + std::to_string(pin) + "=" + std::to_string(estado) + " &";
     std::system(command.c_str());
 }
 
 inline void fail_safe_reset() {
-    std::system("gpioset --chip gpiochip0 19=0 &");
-    std::system("gpioset --chip gpiochip0 32=0 &");
+    std::system("gpioset gpiochip0 19=0 &");
+    std::system("gpioset gpiochip0 32=0 &");
 }
 
 inline void pulse_gpo(Pin pin, int duration_ms) {

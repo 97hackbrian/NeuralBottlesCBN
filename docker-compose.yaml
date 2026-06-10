@@ -46,6 +46,7 @@ services:
     image: localhost/neuralbottles_edge:latest
     devices:
       - "/dev/video0:/dev/video0"
+      - "/dev/gpiochip0:/dev/gpiochip0" # Ajuste según el super IO chip
     group_add:
       - video
     working_dir: /app
