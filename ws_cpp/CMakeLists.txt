@@ -81,6 +81,7 @@ target_include_directories(main PRIVATE
 target_link_libraries(main PRIVATE 
     ${OpenCV_LIBS}
     openvino::runtime
+    Threads::Threads
 )
 
 # Test de GPIO
