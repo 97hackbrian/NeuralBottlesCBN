@@ -2,10 +2,10 @@
 ---
 camera_width: 640
 camera_height: 360
-roi_x: 35
-roi_y: 43
-roi_width: 13
-roi_height: 17
+roi_x: 13
+roi_y: 6
+roi_width: 71
+roi_height: 87
 resize_enable: 0
 resize_width: 288
 resize_height: 144
@@ -13,6 +13,7 @@ grayscale_enable: 0
 blur_enable: 0
 blur_kernel_size: 3
 clahe_enable: 0
-clahe_clip_limit: 40
-hist_eq_enable: 0
+clahe_clip_limit: 100
+hist_eq_enable: 1
 burst_recording_enable: 0
+burst_recording_freq_ms: 2000

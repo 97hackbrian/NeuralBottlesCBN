@@ -27,7 +27,7 @@ services:
       target: cpp_base
     working_dir: /workspace/ws_cpp
     devices:
-      - "/dev/video0:/dev/video0" # Ajuste según su cámara web
+      - "/dev/video2:/dev/video0" # Ajuste según su cámara web
       - "/dev/gpiochip0:/dev/gpiochip0" # Ajuste según el super IO chip
     group_add:
       - video
