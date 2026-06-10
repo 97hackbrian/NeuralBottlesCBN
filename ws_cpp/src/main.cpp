@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
                 // Disparo físico del actuador solo 1 vez por caja mala detectada
                 if (!piston_fired_for_current_box) {
                     std::cout << "\n[HARDWARE] ¡Casillero incompleto detectado! Activando Pistón (GPO2)...\n";
-                    cbn::pulse_gpo(cbn::GPO_2, 3000);
+                    cbn::pulse_gpo(cbn::GPO_2, 150);
                     piston_fired_for_current_box = true;
                 }
             }
